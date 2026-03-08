@@ -1,0 +1,10 @@
+project_id = "qyvosihfvhploydbqicg"
+
+[functions.parse-resume]
+verify_jwt = false
+
+[functions.generate-roadmap]
+verify_jwt = false
+
+[functions.video-notes]
+verify_jwt = false
