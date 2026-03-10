@@ -31,6 +31,51 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Upload, FileType, CheckCircle2 } from "lucide-react";
+import * as pdfjsLib from 'pdfjs-dist';
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
+import mammoth from 'mammoth';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
+
+const RESUME_KEYWORDS = [
+    "skills", "experience", "education", "projects", "certifications", "summary"
+];
+
+const validateResumeContent = async (file: File): Promise<boolean> => {
+    try {
+        let extractedText = "";
+        
+        if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map((item: any) => item.str).join(" ");
+                extractedText += pageText + " ";
+            }
+        } else if (
+            file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || 
+            file.name.toLowerCase().endsWith(".docx")
+        ) {
+            const arrayBuffer = await file.arrayBuffer();
+            const result = await mammoth.extractRawText({ arrayBuffer });
+            extractedText = result.value;
+        } else {
+            return false; // Unsupported type
+        }
+        
+        const textLower = extractedText.toLowerCase();
+        const matchedKeywords = RESUME_KEYWORDS.filter(keyword => 
+            textLower.includes(keyword.toLowerCase())
+        );
+        return matchedKeywords.length >= 2;
+    } catch (error) {
+        console.error("Error validating resume:", error);
+        return false;
+    }
+};
 
 export default function SkillsInputsData() {
     const { toast } = useToast();
@@ -54,7 +99,7 @@ export default function SkillsInputsData() {
             if (!validTypes.includes(selectedFile.type)) {
                 toast({
                     title: "Invalid file type",
-                    description: "Please upload a PDF or DOCX file.",
+                    description: "Please upload a valid resume file (PDF or DOCX).",
                     variant: "destructive",
                 });
                 return;
@@ -83,6 +128,24 @@ export default function SkillsInputsData() {
         try {
             // 1. Upload file to Cloudinary first if one is selected
             if (file) {
+                // Validate resume content first
+                const isValidResume = await validateResumeContent(file);
+                
+                if (!isValidResume) {
+                    toast({
+                        title: "Validation Failed",
+                        description: "This file does not appear to contain a resume. Please upload a valid resume.",
+                        variant: "destructive",
+                    });
+                    setIsSubmitting(false);
+                    return;
+                }
+                
+                toast({
+                    title: "Resume Detected",
+                    description: "File successfully uploaded. Resume detected.",
+                });
+
                 const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
                 const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 

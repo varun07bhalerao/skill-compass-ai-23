@@ -106,8 +106,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         completedMilestones: [],
       };
       
-      // Force update the name to the Google User's name if they have one
+      // Force update the name and email to the Google User's actual data
       userData.name = userCredential.user.displayName || userData.name;
+      userData.email = userCredential.user.email || userData.email;
       
       localStorage.setItem("skillbridge-user", JSON.stringify(userData));
       setUser(userData);
