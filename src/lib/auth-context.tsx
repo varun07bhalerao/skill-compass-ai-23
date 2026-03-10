@@ -17,7 +17,7 @@ interface AuthContextType {
   user: UserProfile | null;
   login: (email: string, password: string) => Promise<boolean>;
   signup: (name: string, email: string, password: string) => Promise<boolean>;
-  loginWithGoogle: () => Promise<boolean>;
+  loginWithGoogle: () => Promise<string | null>;
   logout: () => Promise<void>;
   updateUser: (updates: Partial<UserProfile>) => void;
 }
@@ -27,7 +27,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   login: async () => false,
   signup: async () => false,
-  loginWithGoogle: async () => false,
+  loginWithGoogle: async () => null,
   logout: async () => {},
   updateUser: () => {},
 });
@@ -93,7 +93,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const loginWithGoogle = async (): Promise<boolean> => {
+  const loginWithGoogle = async (): Promise<string | null> => {
     try {
       const provider = new GoogleAuthProvider();
       const userCredential = await signInWithPopup(auth, provider);
@@ -112,10 +112,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem("skillbridge-user", JSON.stringify(userData));
       setUser(userData);
       
-      return true;
+      return userCredential.user.email;
     } catch (error) {
       console.error("Google Login Error:", error);
-      return false;
+      return null;
     }
   };
 

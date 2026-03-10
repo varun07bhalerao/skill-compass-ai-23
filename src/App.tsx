@@ -17,6 +17,7 @@ import JobMatching from "@/pages/JobMatching";
 import VideoNotes from "@/pages/VideoNotes";
 import ProgressTracking from "@/pages/ProgressTracking";
 import NotFound from "@/pages/NotFound";
+import SkillsInputsData from "@/features/skills_inputs_data";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,7 @@ const App = () => (
                 <Route path="/jobs" element={<JobMatching />} />
                 <Route path="/video-notes" element={<VideoNotes />} />
                 <Route path="/progress" element={<ProgressTracking />} />
+                <Route path="/skill-profile" element={<SkillsInputsData />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Layout>
