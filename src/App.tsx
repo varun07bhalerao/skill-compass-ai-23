@@ -9,7 +9,7 @@ import Layout from "@/components/Layout";
 import Landing from "@/pages/Landing";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
-import ResumeUpload from "@/pages/ResumeUpload";
+import ResumeUpload from "@/features/ResumeUpload";
 import SkillAnalysis from "@/pages/SkillAnalysis";
 import LearningRoadmap from "@/pages/LearningRoadmap";
 import Courses from "@/pages/Courses";

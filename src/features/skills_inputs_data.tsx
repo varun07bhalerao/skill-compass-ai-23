@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Upload, FileType, CheckCircle2 } from "lucide-react";
 import * as pdfjsLib from 'pdfjs-dist';
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.js?url';
 import mammoth from 'mammoth';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
