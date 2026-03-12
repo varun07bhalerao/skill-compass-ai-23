@@ -1,15 +1,15 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+declare const Deno: any;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { skills, missingSkills, targetRole } = await req.json();
+    const { skills, missingSkills, targetRole, weeks = 8 } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -24,14 +24,14 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a career mentor creating a personalized learning roadmap. Generate an 8-12 week plan with exactly 3 milestones, 2 project suggestions, and 3 course recommendations. Return structured JSON via the tool.`
+            content: `You are a career mentor. Generate a STRICT AND EXACT ${weeks}-week learning roadmap. Return structured JSON via the tool. IT IS ABSOLUTELY CRITICAL that the 'totalWeeks' property is exactly ${weeks}, and the milestones collectively span exactly ${weeks} weeks.`
           },
           {
             role: "user",
-            content: `Create a learning roadmap for someone targeting the role: ${targetRole}.
+            content: `Create a rigid ${weeks}-week learning roadmap for someone targeting the role: ${targetRole}.
 Current skills: ${JSON.stringify(skills)}
 Missing skills to learn: ${JSON.stringify(missingSkills)}
-Make it practical with specific tasks and real course recommendations.`
+Make it practical with specific tasks and real course recommendations. The final milestone MUST end on week ${weeks}.`
           }
         ],
         tools: [
@@ -43,7 +43,7 @@ Make it practical with specific tasks and real course recommendations.`
               parameters: {
                 type: "object",
                 properties: {
-                  totalWeeks: { type: "number" },
+                  totalWeeks: { type: "number", description: `MUST BE EXACTLY ${weeks}` },
                   milestones: {
                     type: "array",
                     items: {
@@ -128,3 +128,5 @@ Make it practical with specific tasks and real course recommendations.`
     });
   }
 });
+
+export {};

@@ -11,7 +11,7 @@ import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import ResumeUpload from "@/features/ResumeUpload";
 import SkillAnalysis from "@/pages/SkillAnalysis";
-import LearningRoadmap from "@/pages/LearningRoadmap";
+import LearningRoadmap from "@/features/LearningRoadmap";
 import Courses from "@/pages/Courses";
 import JobMatching from "@/pages/JobMatching";
 import VideoNotes from "@/pages/VideoNotes";
