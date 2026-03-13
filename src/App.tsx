@@ -10,7 +10,7 @@ import Landing from "@/pages/Landing";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import ResumeUpload from "@/features/ResumeUpload";
-import SkillAnalysis from "@/pages/SkillAnalysis";
+import SkillAnalysis from "@/features/SkillAnalysis";
 import LearningRoadmap from "@/features/LearningRoadmap";
 import Courses from "@/pages/Courses";
 import JobMatching from "@/pages/JobMatching";
