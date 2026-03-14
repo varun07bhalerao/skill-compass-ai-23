@@ -337,13 +337,13 @@ export default function SkillsInputsData() {
                                         <SelectValue placeholder="Select your target role" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="frontend">Frontend Developer</SelectItem>
-                                        <SelectItem value="backend">Backend Developer</SelectItem>
-                                        <SelectItem value="fullstack">Full Stack Developer</SelectItem>
-                                        <SelectItem value="data">Data Analyst</SelectItem>
-                                        <SelectItem value="uiux">UI/UX Designer</SelectItem>
-                                        <SelectItem value="cybersecurity">Cybersecurity Analyst</SelectItem>
-                                        <SelectItem value="sap">SAP Consultant</SelectItem>
+                                        <SelectItem value="Frontend Developer">Frontend Developer</SelectItem>
+                                        <SelectItem value="Backend Developer">Backend Developer</SelectItem>
+                                        <SelectItem value="Full Stack Developer">Full Stack Developer</SelectItem>
+                                        <SelectItem value="Data Analyst">Data Analyst</SelectItem>
+                                        <SelectItem value="UI/UX Designer">UI/UX Designer</SelectItem>
+                                        <SelectItem value="Cybersecurity Analyst">Cybersecurity Analyst</SelectItem>
+                                        <SelectItem value="SAP Consultant">SAP Consultant</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

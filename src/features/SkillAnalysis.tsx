@@ -82,11 +82,11 @@ const SkillAnalysis = () => {
           console.warn("jobRoles collection is empty. You need to populate it in Firebase.");
           // Create some sample ones just so the page works if they haven't seeded yet.
           const seedRoles = [
-            { id: "data_scientist", roleName: "Data Scientist", requiredSkills: ["Python", "Pandas", "NumPy", "Machine Learning", "SQL", "Statistics", "Data Visualization"] },
-            { id: "frontend_developer", roleName: "Frontend Developer", requiredSkills: ["HTML", "CSS", "JavaScript", "React", "Git"] },
-            { id: "backend_developer", roleName: "Backend Developer", requiredSkills: ["Node.js", "Python", "Java", "SQL", "MongoDB", "Express", "REST API", "Git"] },
-            { id: "qa_engineer", roleName: "QA Engineer", requiredSkills: ["Testing", "Selenium", "JIRA", "Automation", "Agile", "SQL", "Python"] },
-            { id: "data_analyst", roleName: "Data Analyst", requiredSkills: ["SQL", "Excel", "Data Visualization", "Python", "Statistics", "Power BI", "Tableau"] }
+            { id: "software_developer", roleName: "Software Developer", requiredSkills: ["HTML", "CSS", "JavaScript", "React", "Node.js", "Express", "MongoDB", "Git", "Next.js", "Docker"] },
+            { id: "ai_engineer", roleName: "AI Engineer", requiredSkills: ["Python", "Calculus", "PyTorch", "Transformers", "RAG", "Machine Learning"] },
+            { id: "data_scientist", roleName: "Data Scientist", requiredSkills: ["Python", "Pandas", "NumPy", "Scikit-Learn", "SQL", "Statistics", "Data Visualization"] },
+            { id: "cloud_engineer", roleName: "Cloud Engineer", requiredSkills: ["AWS", "Linux", "Docker", "Terraform", "CI/CD", "Kubernetes"] },
+            { id: "cyber_security", roleName: "Cyber Security", requiredSkills: ["TCP/IP", "Linux", "Kali Linux", "BurpSuite", "Networking"] }
           ];
 
           for (const role of seedRoles) {
@@ -249,7 +249,10 @@ const SkillAnalysis = () => {
       <div className="grid gap-6 lg:grid-cols-3 mb-6">
         {/* Overall Readiness Score Card */}
         {targetRoleMatch && (
-          <Card className="border shadow-sm bg-white animate-fade-in flex flex-col items-center justify-center p-6">
+          <Card 
+            onClick={() => navigate("/courses", { state: { domain: targetRoleMatch.roleName } })}
+            className="border shadow-sm bg-white animate-fade-in flex flex-col items-center justify-center p-6 cursor-pointer hover:border-blue-400 transition-colors"
+          >
             <CardHeader className="w-full text-left p-0 mb-6">
               <CardTitle className="font-display text-lg font-semibold text-slate-800">
                 Readiness Score
@@ -318,7 +321,11 @@ const SkillAnalysis = () => {
       {/* Role Detail Cards */}
       <div className="grid gap-6 md:grid-cols-3">
         {matchedRoles.map((role, index) => (
-          <Card key={role.roleName} className="border shadow-sm bg-white animate-fade-in h-full flex flex-col">
+          <Card 
+            key={role.roleName} 
+            onClick={() => navigate("/courses", { state: { domain: role.roleName } })}
+            className="border shadow-sm bg-white animate-fade-in h-full flex flex-col cursor-pointer hover:border-blue-400 hover:shadow-md transition-all"
+          >
             <CardHeader className="pb-3 border-b border-slate-50">
               <div className="flex items-center justify-between mb-2">
                 <CardTitle className="text-lg font-semibold text-slate-900">
@@ -385,7 +392,8 @@ const SkillAnalysis = () => {
             {topMissingSkills.map((item, index) => (
               <div
                 key={item.skill}
-                className="flex items-center justify-between p-4 rounded-xl bg-slate-100/80 border border-slate-200/60 hover:bg-slate-200/80 transition-colors group cursor-default"
+                onClick={() => navigate("/courses", { state: { skill: item.skill } })}
+                className="flex items-center justify-between p-4 rounded-xl bg-slate-100/80 border border-slate-200/60 hover:bg-slate-200 hover:shadow-sm transition-all group cursor-pointer"
               >
                 <div className="flex items-center gap-4">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-600 font-bold text-sm shadow-sm">
