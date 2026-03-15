@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useLanguage } from "@/lib/i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,9 +11,10 @@ import { Roadmap } from "@/lib/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { FeedbackModal } from "./FeedbackModal";
 
 const LearningRoadmap = () => {
   const { user, updateUser } = useAuth();
@@ -23,10 +24,13 @@ const LearningRoadmap = () => {
   const [weeks, setWeeks] = useState(8);
   const [targetRole, setTargetRole] = useState<string>("");
 
+  // Feedback Modal State
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+
   const roadmap = user?.roadmap;
 
   // Fetch career goal on mount
-  useState(() => {
+  useEffect(() => {
     let isMounted = true;
     const fetchGoal = async () => {
       if (!user?.email) return;
@@ -81,13 +85,38 @@ const LearningRoadmap = () => {
       // Force the generated roadmap to obey the requested weeks
       let processedRoadmap: Roadmap = data as Roadmap;
       
-      // Filter out milestones that start after our requested duration
-      const validMilestones = processedRoadmap.milestones.filter(m => m.weekStart <= weeks);
+      const expandedMilestones: any[] = [];
+      processedRoadmap.milestones.forEach((m) => {
+        if (m.weekStart < m.weekEnd) {
+          const duration = m.weekEnd - m.weekStart + 1;
+          const tasksPerWeek = Math.ceil((m.tasks?.length || 0) / duration);
+          
+          for (let w = m.weekStart; w <= m.weekEnd; w++) {
+            const partIdx = w - m.weekStart;
+            const taskStart = partIdx * tasksPerWeek;
+            const taskEnd = taskStart + tasksPerWeek;
+            const slicedTasks = m.tasks?.slice(taskStart, taskEnd) || [];
+            const weekTasks = slicedTasks.length > 0 ? slicedTasks : (m.tasks || []);
+                
+            expandedMilestones.push({
+              ...m,
+              id: `${m.id}-w${w}`,
+              title: `${m.title} (Part ${partIdx + 1})`,
+              weekStart: w,
+              weekEnd: w,
+              tasks: weekTasks
+            });
+          }
+        } else {
+          expandedMilestones.push({
+            ...m,
+            weekEnd: m.weekStart // ensure they are strictly single weeks
+          });
+        }
+      });
       
-      // Clamp the final milestone's weekEnd to exactly match the requested weeks
-      if (validMilestones.length > 0) {
-        validMilestones[validMilestones.length - 1].weekEnd = weeks;
-      }
+      // Filter out milestones that start after our requested duration
+      const validMilestones = expandedMilestones.filter(m => m.weekStart <= weeks);
 
       processedRoadmap = {
         ...processedRoadmap,
@@ -105,26 +134,88 @@ const LearningRoadmap = () => {
     }
   };
 
-  useState(() => {
+  useEffect(() => {
     if (targetRole && !roadmap && !isGenerating) {
       generateRoadmap();
     }
-    
-    // If a roadmap exists, ensure the input matches its duration
-    if (roadmap?.totalWeeks && weeks !== roadmap.totalWeeks) {
+  }, [targetRole, roadmap, isGenerating]);
+
+  // Sync the input initially and when a new roadmap finishes generating
+  useEffect(() => {
+    if (roadmap?.totalWeeks) {
       setWeeks(roadmap.totalWeeks);
     }
-  });
+  }, [roadmap?.totalWeeks]);
 
-  const toggleMilestone = (milestoneId: string) => {
+  const toggleMilestone = async (milestoneId: string) => {
     if (!roadmap) return;
+    
+    const currentIndex = roadmap.milestones.findIndex(m => m.id === milestoneId);
+    if (currentIndex === -1) return;
+    
+    const targetMilestone = roadmap.milestones[currentIndex];
+    const isCompleting = !targetMilestone.completed;
+
+    // If trying to complete this milestone, check if previous ones are completed
+    if (isCompleting && currentIndex > 0) {
+      const prevMilestone = roadmap.milestones[currentIndex - 1];
+      if (!prevMilestone.completed) {
+        toast.error(`Please complete "${prevMilestone.title}" first!`);
+        return; // Prevent completion
+      }
+    }
+
     const updated = {
       ...roadmap,
       milestones: roadmap.milestones.map((m) =>
         m.id === milestoneId ? { ...m, completed: !m.completed } : m
       ),
     };
+    
     const completedIds = updated.milestones.filter((m) => m.completed).map((m) => m.id);
+    
+    if (isCompleting) {
+      const percentage = Math.round((completedIds.length / roadmap.milestones.length) * 100);
+      
+      let nextStep = "You've completed your entire roadmap! Outstanding!";
+      if (currentIndex + 1 < roadmap.milestones.length) {
+        // Since we force sequential completion, the next milestone is exactly currentIndex + 1
+        const nextMilestone = roadmap.milestones[currentIndex + 1];
+        nextStep = `Next step: ${nextMilestone.title}.`;
+        toast.success(`You've closed ${percentage}% of your gaps. ${nextStep}`);
+      } else {
+        // Entire roadmap completed!
+        toast.success(`You've closed ${percentage}% of your gaps. ${nextStep}`);
+        
+        // Before showing modal, check if feedback is already submitted
+        if (user?.email && targetRole) {
+          const feedbackRef = collection(db, "roadmapFeedback");
+          const q = query(
+            feedbackRef, 
+            where("userEmail", "==", user?.email),
+            where("targetRole", "==", targetRole)
+          );
+          try {
+            const querySnapshot = await getDocs(q);
+            if (!querySnapshot.empty) {
+              toast.info("You've already provided feedback for this roadmap. Thanks again!");
+            } else {
+              setTimeout(() => setShowFeedbackModal(true), 1500); // Show modal after a brief delay
+            }
+          } catch (err) {
+            console.error(err);
+            // On error, degrade gracefully by showing modal
+            setTimeout(() => setShowFeedbackModal(true), 1500); 
+          }
+        } else {
+          setTimeout(() => setShowFeedbackModal(true), 1500);
+        }
+      }
+    } else {
+      const percentage = Math.round((completedIds.length / roadmap.milestones.length) * 100);
+      toast.info(`Taking a step back on "${targetMilestone.title}"? No problem. You're currently at ${percentage}% completion. Keep going!`);
+    }
+
     updateUser({ roadmap: updated, completedMilestones: completedIds });
   };
 
@@ -178,7 +269,7 @@ const LearningRoadmap = () => {
           <div className="flex items-center gap-4">
             <Badge variant="outline" className="text-sm">{roadmap.totalWeeks} weeks</Badge>
             <Badge variant="outline" className="text-sm">
-              {roadmap.milestones.filter((m) => m.completed).length}/{roadmap.milestones.length} milestones
+              {roadmap.milestones.filter((m) => m.completed).length}/{roadmap.milestones.length} weeks completed
             </Badge>
           </div>
 
@@ -203,7 +294,10 @@ const LearningRoadmap = () => {
                         {milestone.title}
                       </CardTitle>
                       <Badge variant="secondary">
-                        {t("roadmap.week")} {milestone.weekStart}-{milestone.weekEnd}
+                        {milestone.weekStart === milestone.weekEnd
+                          ? `${t("roadmap.week")} ${milestone.weekStart}`
+                          : `${t("roadmap.week")} ${milestone.weekStart}-${milestone.weekEnd}`
+                        }
                       </Badge>
                     </div>
                   </CardHeader>
@@ -270,6 +364,14 @@ const LearningRoadmap = () => {
           )}
         </div>
       )}
+
+      {/* Feedback Modal */}
+      <FeedbackModal 
+        open={showFeedbackModal} 
+        onOpenChange={setShowFeedbackModal} 
+        userEmail={user?.email || undefined}
+        targetRole={targetRole}
+      />
     </div>
   );
 };

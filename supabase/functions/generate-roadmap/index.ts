@@ -13,6 +13,8 @@ Deno.serve(async (req: Request) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
+    const weekNumbers = Array.from({length: weeks}, (_, i) => i + 1).map(w => `Week ${w}`).join(", ");
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -24,14 +26,17 @@ Deno.serve(async (req: Request) => {
         messages: [
           {
             role: "system",
-            content: `You are a career mentor. Generate a STRICT AND EXACT ${weeks}-week learning roadmap. Return structured JSON via the tool. IT IS ABSOLUTELY CRITICAL that the 'totalWeeks' property is exactly ${weeks}, and the milestones collectively span exactly ${weeks} weeks.`
+            content: `You are a career mentor. Generate a STRICT AND EXACT ${weeks}-week learning roadmap. Return structured JSON via the tool. IT IS ABSOLUTELY CRITICAL that the 'totalWeeks' property is exactly ${weeks}, and the milestones array has EXACTLY ${weeks} items.`
           },
           {
             role: "user",
             content: `Create a rigid ${weeks}-week learning roadmap for someone targeting the role: ${targetRole}.
 Current skills: ${JSON.stringify(skills)}
 Missing skills to learn: ${JSON.stringify(missingSkills)}
-Make it practical with specific tasks and real course recommendations. The final milestone MUST end on week ${weeks}.`
+
+DO NOT GROUP WEEKS UNDER ANY CIRCUMSTANCES. Even in the middle of the roadmap, you MUST generate EXACTLY ${weeks} separate objects in the milestones array, one for each of these EXACT weeks: ${weekNumbers}.
+For example, the first object must be Week 1 (weekStart: 1, weekEnd: 1). The second object must be Week 2 (weekStart: 2, weekEnd: 2). The third MUST be Week 3 (weekStart: 3, weekEnd: 3), and so on.
+If you output an object with weekStart 1 and weekEnd 4, YOU WILL FAIL. Every single item MUST have weekStart === weekEnd.`
           }
         ],
         tools: [
