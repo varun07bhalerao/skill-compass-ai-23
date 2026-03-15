@@ -104,10 +104,19 @@ export interface UserProfile {
   completedMilestones: string[];
 }
 
+export interface SectionNote {
+  title: string;
+  content: string;
+}
+
 export interface VideoNote {
   url: string;
   title: string;
-  bulletPoints: string[];
+  overview: string;
+  mainTopics: string[];
+  sectionNotes: SectionNote[];
+  keyTakeaways: string[];
+  finalSummary: string;
   createdAt: string;
 }
 

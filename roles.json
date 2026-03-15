@@ -1,0 +1,195 @@
+[
+  {
+    "id": "DZTMcEYns5FfM8W1B9Mp",
+    "data": {
+      "jobRole": "Full Stack Developer",
+      "requiredSkills": [
+        "HTML",
+        "CSS",
+        "JavaScript",
+        "React",
+        "Node.js",
+        "Express.js",
+        "MongoDB",
+        "Git"
+      ]
+    }
+  },
+  {
+    "id": "Iqn7rxOb67toDCOawAw1",
+    "data": {
+      "requiredSkills": [
+        "Python",
+        "Selenium",
+        "Test Automation",
+        "Java",
+        "CI/CD",
+        "API Testing",
+        "Jenkins"
+      ],
+      "jobRole": "Automation Engineer"
+    }
+  },
+  {
+    "id": "KGJIp06mpk592OYfLfAJ",
+    "data": {
+      "jobRole": "Cyber Security Specialist",
+      "requiredSkills": [
+        "Network Security",
+        "Ethical Hacking",
+        "Penetration Testing",
+        "Cryptography",
+        "Linux",
+        "Python"
+      ]
+    }
+  },
+  {
+    "id": "MMM9W54kCISbMxhQkDXF",
+    "data": {
+      "jobRole": "Generative AI Specialist",
+      "requiredSkills": [
+        "Python",
+        "Deep Learning",
+        "LLMs",
+        "Prompt Engineering",
+        "LangChain",
+        "HuggingFace",
+        "Transformers"
+      ]
+    }
+  },
+  {
+    "id": "XN2ZVCiiFum0K7GPR76r",
+    "data": {
+      "jobRole": "DevOps Engineer",
+      "requiredSkills": [
+        "Docker",
+        "Kubernetes",
+        "CI/CD",
+        "Jenkins",
+        "Linux",
+        "AWS",
+        "Terraform",
+        "Git"
+      ]
+    }
+  },
+  {
+    "id": "YJsS3mEIU3nEvYXk3ttn",
+    "data": {
+      "jobRole": "Data Engineer",
+      "requiredSkills": [
+        "Python",
+        "SQL",
+        "Apache Spark",
+        "Hadoop",
+        "ETL",
+        "Data Warehousing",
+        "Kafka"
+      ]
+    }
+  },
+  {
+    "id": "data analytics",
+    "data": {
+      "jobrole": [
+        "Python",
+        "R",
+        "Power BI",
+        "SQL",
+        "Excel",
+        "Statical Analysis",
+        "Tableau"
+      ]
+    }
+  },
+  {
+    "id": "f6PmCkTvxoK46GEPvhjm",
+    "data": {
+      "jobRole": "Backend Developer",
+      "requiredSkills": [
+        "Node.js",
+        "Express.js",
+        "Python",
+        "Java",
+        "SQL",
+        "MongoDB",
+        "Git"
+      ]
+    }
+  },
+  {
+    "id": "gurZtvcUUPqlHu54pHoI",
+    "data": {
+      "requiredSkills": [
+        "Java",
+        "Kotlin",
+        "Android SDK",
+        "XML",
+        "Firebase",
+        "REST API",
+        "Git"
+      ],
+      "jobRole": "Android Developer"
+    }
+  },
+  {
+    "id": "mSY8Y3phyU2G2bfjmvJY",
+    "data": {
+      "requiredSkills": [
+        "Python",
+        "R",
+        "Statistics",
+        "Machine Learning",
+        "Pandas",
+        "NumPy",
+        "SQL"
+      ],
+      "jobRole": "Data Scientist"
+    }
+  },
+  {
+    "id": "o6mbWiXEvXrWLPf3cj9B",
+    "data": {
+      "requiredSkills": [
+        "HTML",
+        "CSS",
+        "JavaScript",
+        "React",
+        "Git",
+        "Responsive Design"
+      ],
+      "jobRole": "Frontend Developer"
+    }
+  },
+  {
+    "id": "oLcz6IAudtOWt2WDkxV4",
+    "data": {
+      "requiredSkills": [
+        "AWS",
+        "Azure",
+        "Google Cloud",
+        "Docker",
+        "Kubernetes",
+        "Linux",
+        "Terraform"
+      ],
+      "jobRole": "Cloud Architect Engineer"
+    }
+  },
+  {
+    "id": "vl9a3UAY6PH6KOjE9faL",
+    "data": {
+      "requiredSkills": [
+        "Python",
+        "Machine Learning",
+        "Deep Learning",
+        "TensorFlow",
+        "PyTorch",
+        "NLP"
+      ],
+      "jobRole": "AIML Engineer"
+    }
+  }
+]

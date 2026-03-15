@@ -14,7 +14,7 @@ import SkillAnalysis from "@/features/SkillAnalysis";
 import LearningRoadmap from "@/features/LearningRoadmap";
 import Courses from "@/pages/Courses";
 import JobMatching from "@/features/JobMatching";
-import VideoNotes from "@/pages/VideoNotes";
+import VideoNotes from "@/features/VideoNotes";
 import ProgressTracking from "@/pages/ProgressTracking";
 import NotFound from "@/pages/NotFound";
 import SkillsInputsData from "@/features/skills_inputs_data";
