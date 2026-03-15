@@ -7,6 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Briefcase, MapPin, Clock, CheckCircle2, XCircle, ExternalLink, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import axios from "axios";
+
+// To use JSearch API from RapidAPI, you need an API key. 
+// If this isn't provided, the app will gracefully fallback to Remotive API.
+const RAPID_API_KEY = import.meta.env.VITE_RAPID_API_KEY || ""; 
 
 interface Job {
   id: string | number;
@@ -28,9 +35,6 @@ const roleRequirements: Record<string, string[]> = {
   "Full Stack Developer": ["JavaScript", "React", "Node.js", "SQL", "MongoDB", "Docker", "AWS"],
 };
 
-// Fallback user skills if no user skills exist for better UI demo logic in empty states
-const defaultDemoSkills = ["html", "css", "javascript", "react", "sql", "excel", "python", "communication"];
-
 const JobMatching = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -40,11 +44,31 @@ const JobMatching = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userParsedSkills, setUserParsedSkills] = useState<string[]>([]);
 
-  // Define user skills, default to demo skills if none exist to avoid showing 0% everywhere if somehow user lacks resume
-  const userSkills = user?.resume?.skills 
+  // Use empty array if no skills exist to accurately reflect 0% match
+  const resumeSkills = user?.resume?.skills 
     ? user.resume.skills.map(s => s.skill.toLowerCase()) 
-    : defaultDemoSkills;
+    : [];
+
+  useEffect(() => {
+    const fetchUserSkills = async () => {
+      if (user?.email) {
+        try {
+          const docRef = doc(db, "userProfiles", user.email);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists() && docSnap.data().parsedSkills) {
+            setUserParsedSkills(docSnap.data().parsedSkills.map((s: string) => s.toLowerCase()));
+          }
+        } catch (e) {
+          console.error("Failed to fetch user profiles", e);
+        }
+      }
+    };
+    fetchUserSkills();
+  }, [user?.email]);
+
+  const allUserSkills = Array.from(new Set([...resumeSkills, ...userParsedSkills]));
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -62,33 +86,183 @@ const JobMatching = () => {
         const allJobs: Job[] = [];
         
         for (const query of queries) {
-          const res = await fetch(`https://remotive.com/api/remote-jobs?search=${query.q}&limit=10`);
-          const data = await res.json();
-          
-          if (data.jobs) {
-            const mapped = data.jobs.map((j: any) => {
-              let skillTags = j.tags && j.tags.length > 0 ? j.tags : roleRequirements[query.role];
-              // Ensure we don't have extremely long tag lists breaking the UI
-              if (skillTags.length > 8) skillTags = skillTags.slice(0, 8);
-              
-              // Formatting title and making random heuristics for experience
-              const lowerTitle = j.title.toLowerCase();
-              const experience = lowerTitle.includes("senior") ? "Senior Level" : 
-                                 lowerTitle.includes("junior") ? "Junior Level" : "Mid Level";
-              
-              return {
-                id: j.id,
-                title: j.title,
-                company: j.company_name,
-                role: query.role,
-                description: j.description?.replace(/<[^>]+>/g, '').slice(0, 180).trim() + "...",
-                requiredSkills: skillTags.map((t: string) => t.trim() || "JavaScript"),
-                experienceLevel: experience,
-                location: j.candidate_required_location || "Remote",
-                url: j.url
+          try {
+            if (RAPID_API_KEY) {
+              // 1. Fetch from JSearch (RapidAPI)
+              const options = {
+                method: 'GET',
+                url: 'https://jsearch.p.rapidapi.com/search',
+                params: {
+                  query: `${query.role} remote`,
+                  page: '1',
+                  num_pages: '1'
+                },
+                headers: {
+                  'X-RapidAPI-Key': RAPID_API_KEY,
+                  'X-RapidAPI-Host': 'jsearch.p.rapidapi.com'
+                }
               };
-            });
-            allJobs.push(...mapped);
+              
+              const response = await axios.request(options);
+              let fetchedJobs = response.data.data;
+              if (query.role !== "Full Stack Developer") {
+                fetchedJobs = fetchedJobs.filter((j: any) => {
+                  const t = (j.job_title || "").toLowerCase();
+                  if (t.includes("full stack") || t.includes("full-stack") || t.includes("fullstack")) return false;
+                  if (query.role === "Data Analyst") return t.includes("data") || t.includes("analyst");
+                  if (query.role === "Backend Developer") return t.includes("backend") || t.includes("back-end");
+                  if (query.role === "Frontend Developer") return t.includes("frontend") || t.includes("front-end");
+                  return true;
+                });
+              }
+              fetchedJobs = fetchedJobs.slice(0, 5); // Take exactly top 5
+              
+              const mapped = fetchedJobs.map((j: any) => {
+                const title = j.job_title || "";
+                const lowerTitle = title.toLowerCase();
+                const experienceLevel = j.job_required_experience?.required_experience_in_months
+                  ? j.job_required_experience.required_experience_in_months > 36 ? "Senior Level" : "Mid Level"
+                  : lowerTitle.includes("senior") ? "Senior Level" : lowerTitle.includes("junior") ? "Junior Level" : "Mid Level";
+                  
+                // Fallback to role requirements if API doesn't specificially parse out small arrays for skills
+                const skillTags = roleRequirements[query.role] || [];
+                
+                return {
+                  id: j.job_id || Math.random().toString(),
+                  title: title,
+                  company: j.employer_name || "Unknown Company",
+                  role: query.role,
+                  description: j.job_description ? j.job_description.slice(0, 180).trim() + "..." : "No description available.",
+                  requiredSkills: skillTags,
+                  experienceLevel,
+                  location: j.job_country || j.job_city || "Remote",
+                  url: j.job_apply_link || j.employer_website || "#"
+                };
+              });
+              allJobs.push(...mapped);
+              
+            } else {
+              // 2. Fallback to Remotive if no RapidAPI key
+              const res = await fetch(`https://remotive.com/api/remote-jobs?search=${query.q}&limit=10`);
+              const data = await res.json();
+              
+              if (data.jobs) {
+                let validJobs = data.jobs;
+                if (query.role !== "Full Stack Developer") {
+                  validJobs = validJobs.filter((j: any) => {
+                    const t = (j.title || "").toLowerCase();
+                    if (t.includes("full stack") || t.includes("full-stack") || t.includes("fullstack")) return false;
+                    if (query.role === "Data Analyst") return t.includes("data") || t.includes("analyst");
+                    if (query.role === "Backend Developer") return t.includes("backend") || t.includes("back-end");
+                    if (query.role === "Frontend Developer") return t.includes("frontend") || t.includes("front-end");
+                    return true;
+                  });
+                }
+                
+                const mapped = validJobs.slice(0, 5).map((j: any) => {
+                  let skillTags = j.tags && j.tags.length > 0 ? j.tags : roleRequirements[query.role] || [];
+                  if (skillTags.length > 8) skillTags = skillTags.slice(0, 8);
+                  
+                  const lowerTitle = j.title.toLowerCase();
+                  const experience = lowerTitle.includes("senior") ? "Senior Level" : 
+                                     lowerTitle.includes("junior") ? "Junior Level" : "Mid Level";
+                  
+                  return {
+                    id: j.id,
+                    title: j.title,
+                    company: j.company_name,
+                    role: query.role,
+                    description: j.description?.replace(/<[^>]+>/g, '').slice(0, 180).trim() + "...",
+                    requiredSkills: skillTags.map((t: string) => t.trim() || "JavaScript"),
+                    experienceLevel: experience,
+                    location: j.candidate_required_location || "Remote",
+                    url: j.url
+                  };
+                });
+                allJobs.push(...mapped);
+              }
+            }
+          } catch(err) {
+            console.error(`Error fetching jobs for ${query.role}`, err);
+          }
+
+          if (query.role === "Data Analyst") {
+            const addedCount = allJobs.filter(j => j.role === "Data Analyst").length;
+            if (addedCount < 5) {
+              const fallbackDAJobs: Job[] = [
+                { id: "da_hm_1", title: "Data Analyst", company: "Amazon", role: "Data Analyst", description: "Analyze huge amounts of data in a fast-paced environment.", requiredSkills: roleRequirements["Data Analyst"] || [], experienceLevel: "Mid Level", location: "Mumbai, India", url: "https://www.amazon.jobs/en/search?base_query=data+analyst" },
+                { id: "da_hm_2", title: "Data Analyst", company: "Accenture", role: "Data Analyst", description: "Leverage data tools to bring insights to enterprise clients.", requiredSkills: roleRequirements["Data Analyst"] || [], experienceLevel: "Mid Level", location: "Bangalore, India", url: "https://www.accenture.com/in-en/careers/jobsearch" },
+                { id: "da_hm_3", title: "Data Analyst", company: "Deloitte", role: "Data Analyst", description: "Consulting role involving heavy data pipeline analysis.", requiredSkills: roleRequirements["Data Analyst"] || [], experienceLevel: "Mid Level", location: "Hyderabad, India", url: "https://apply.deloitte.com/careers" },
+                { id: "da_hm_4", title: "Junior Data Analyst", company: "Tata Consultancy Services (TCS)", role: "Data Analyst", description: "Entry-level data analyst to assist in business intelligence.", requiredSkills: roleRequirements["Data Analyst"] || [], experienceLevel: "Junior Level", location: "Pune, India", url: "https://www.tcs.com/careers" },
+                { id: "da_hm_5", title: "Data Analyst", company: "Flipkart", role: "Data Analyst", description: "E-commerce data analytics for supply chain optimization.", requiredSkills: roleRequirements["Data Analyst"] || [], experienceLevel: "Mid Level", location: "Bangalore, India", url: "https://www.flipkartcareers.com" }
+              ];
+              const needed = 5 - addedCount;
+              allJobs.push(...fallbackDAJobs.slice(0, needed));
+            }
+          }
+
+          if (query.role === "QA Engineer") {
+            const addedQaCount = allJobs.filter(j => j.role === "QA Engineer").length;
+            if (addedQaCount < 5) {
+              const fallbackQAJobs: Job[] = [
+                { id: "qa_hm_1", title: "QA Engineer", company: "Amazon", role: "QA Engineer", description: "Develop and execute automated tests using Selenium and Java.", requiredSkills: ["Selenium", "Java", "Automation Testing", "TestNG"], experienceLevel: "Mid Level", location: "Bangalore, India", url: "https://www.amazon.jobs/en/search?base_query=qa+engineer" },
+                { id: "qa_hm_2", title: "Software QA Engineer", company: "Microsoft", role: "QA Engineer", description: "Lead quality assurance efforts across Azure deployment environments.", requiredSkills: ["Manual Testing", "Automation Testing", "C#", "Azure"], experienceLevel: "Mid Level", location: "Hyderabad, India", url: "https://careers.microsoft.com" },
+                { id: "qa_hm_3", title: "QA Automation Engineer", company: "Infosys", role: "QA Engineer", description: "Design rigorous automated API and unit testing suites.", requiredSkills: ["Selenium", "Java", "API Testing", "JUnit"], experienceLevel: "Mid Level", location: "Pune, India", url: "https://www.infosys.com/careers" },
+                { id: "qa_hm_4", title: "Quality Assurance Engineer", company: "Capgemini", role: "QA Engineer", description: "Provide critical manual testing and selenium automation workflows.", requiredSkills: ["Manual Testing", "Selenium", "Test Automation"], experienceLevel: "Mid Level", location: "Mumbai, India", url: "https://www.capgemini.com/careers" },
+                { id: "qa_hm_5", title: "QA Engineer", company: "IBM", role: "QA Engineer", description: "Ensure stable releases via CI/CD and rigorous python automation scripts.", requiredSkills: ["Automation Testing", "Python", "Selenium", "CI/CD"], experienceLevel: "Mid Level", location: "Bangalore, India", url: "https://www.ibm.com/careers" },
+                { id: "qa_hm_6", title: "Senior QA Engineer", company: "Oracle", role: "QA Engineer", description: "Architect QA automation frameworks leveraging SQL and Java integration.", requiredSkills: ["Selenium", "Java", "Automation Framework", "SQL"], experienceLevel: "Senior Level", location: "Hyderabad, India", url: "https://www.oracle.com/careers" }
+              ];
+              const needed = 5 - addedQaCount;
+              allJobs.push(...fallbackQAJobs.slice(0, needed));
+            }
+          }
+
+          if (query.role === "Backend Developer") {
+            const addedBackendCount = allJobs.filter(j => j.role === "Backend Developer").length;
+            if (addedBackendCount < 5) {
+              const fallbackBackendJobs: Job[] = [
+                { id: "be_hm_1", title: "Backend Developer", company: "Amazon", role: "Backend Developer", description: "Build highly scalable web services using Java and Spring Boot.", requiredSkills: ["Java", "Spring Boot", "AWS", "REST API"], experienceLevel: "Mid Level", location: "Bangalore, India", url: "https://www.amazon.jobs/en/search?base_query=backend+developer" },
+                { id: "be_hm_2", title: "Software Engineer – Backend", company: "Microsoft", role: "Backend Developer", description: "Enhance microservices architecture hosted natively on Azure cloud.", requiredSkills: ["C#", ".NET", "Azure", "Microservices"], experienceLevel: "Mid Level", location: "Hyderabad, India", url: "https://careers.microsoft.com" },
+                { id: "be_hm_3", title: "Backend Engineer", company: "Infosys", role: "Backend Developer", description: "Architect and deliver fast, resilient API endpoints.", requiredSkills: ["Java", "Spring Boot", "SQL", "API Development"], experienceLevel: "Mid Level", location: "Pune, India", url: "https://www.infosys.com/careers" },
+                { id: "be_hm_4", title: "Backend Developer", company: "Capgemini", role: "Backend Developer", description: "Node.js development for global scale modern web applications.", requiredSkills: ["Node.js", "Express.js", "MongoDB", "REST API"], experienceLevel: "Mid Level", location: "Mumbai, India", url: "https://www.capgemini.com/careers" },
+                { id: "be_hm_5", title: "Backend Software Engineer", company: "IBM", role: "Backend Developer", description: "Collaborate in an agile team on complex enterprise cloud solutions.", requiredSkills: ["Python", "Django", "SQL", "Cloud"], experienceLevel: "Mid Level", location: "Bangalore, India", url: "https://www.ibm.com/careers" },
+                { id: "be_hm_6", title: "Senior Backend Developer", company: "Oracle", role: "Backend Developer", description: "Develop business-critical applications alongside highly capable data teams.", requiredSkills: ["Java", "Spring", "Microservices", "Oracle DB"], experienceLevel: "Senior Level", location: "Hyderabad, India", url: "https://www.oracle.com/careers" }
+              ];
+              const needed = 5 - addedBackendCount;
+              allJobs.push(...fallbackBackendJobs.slice(0, needed));
+            }
+          }
+
+          if (query.role === "Frontend Developer") {
+            const addedFrontendCount = allJobs.filter(j => j.role === "Frontend Developer").length;
+            if (addedFrontendCount < 5) {
+              const fallbackFrontendJobs: Job[] = [
+                { id: "fe_hm_1", title: "Frontend Developer", company: "Amazon", role: "Frontend Developer", description: "Design fast and responsive client-side experiences for scalable applications.", requiredSkills: ["JavaScript", "React", "HTML", "CSS"], experienceLevel: "Mid Level", location: "Bangalore, India", url: "https://www.amazon.jobs/en/search?base_query=frontend+developer" },
+                { id: "fe_hm_2", title: "Software Engineer – Frontend", company: "Microsoft", role: "Frontend Developer", description: "Develop modern intuitive user interfaces using cutting-edge web technologies.", requiredSkills: ["TypeScript", "React", "HTML", "CSS"], experienceLevel: "Mid Level", location: "Hyderabad, India", url: "https://careers.microsoft.com" },
+                { id: "fe_hm_3", title: "Frontend Engineer", company: "Flipkart", role: "Frontend Developer", description: "Enhance core e-commerce rendering patterns for massive user bases.", requiredSkills: ["JavaScript", "React", "Redux", "HTML"], experienceLevel: "Mid Level", location: "Bangalore, India", url: "https://www.flipkartcareers.com" },
+                { id: "fe_hm_4", title: "UI Developer", company: "Infosys", role: "Frontend Developer", description: "Build scalable and performant UI components for global consumers.", requiredSkills: ["Angular", "JavaScript", "HTML", "CSS"], experienceLevel: "Mid Level", location: "Pune, India", url: "https://www.infosys.com/careers" },
+                { id: "fe_hm_5", title: "Frontend Developer", company: "Capgemini", role: "Frontend Developer", description: "Architect UI/UX for enterprise dashboard solutions.", requiredSkills: ["React", "JavaScript", "CSS", "Bootstrap"], experienceLevel: "Mid Level", location: "Mumbai, India", url: "https://www.capgemini.com/careers" },
+                { id: "fe_hm_6", title: "Frontend Software Engineer", company: "IBM", role: "Frontend Developer", description: "Optimize performance and accessibility on cutting-edge internal tools.", requiredSkills: ["JavaScript", "React", "Node.js", "UI Development"], experienceLevel: "Mid Level", location: "Bangalore, India", url: "https://www.ibm.com/careers" }
+              ];
+              const needed = 5 - addedFrontendCount;
+              allJobs.push(...fallbackFrontendJobs.slice(0, needed));
+            }
+          }
+
+          if (query.role === "Full Stack Developer") {
+            const addedFsCount = allJobs.filter(j => j.role === "Full Stack Developer").length;
+            if (addedFsCount < 5) {
+              const fallbackFSJobs: Job[] = [
+                { id: "fs_hm_1", title: "Full Stack Developer", company: "Amazon", role: "Full Stack Developer", description: "Deliver end-to-end features bridging complex backend logic with smooth UIs.", requiredSkills: ["Java", "React", "Spring Boot", "AWS"], experienceLevel: "Mid Level", location: "Bangalore, India", url: "https://www.amazon.jobs/en/search?base_query=full+stack+developer" },
+                { id: "fs_hm_2", title: "Full Stack Software Engineer", company: "Microsoft", role: "Full Stack Developer", description: "Engineer scalable products from database to presentation layer.", requiredSkills: ["C#", ".NET", "React", "Azure"], experienceLevel: "Mid Level", location: "Hyderabad, India", url: "https://careers.microsoft.com" },
+                { id: "fs_hm_3", title: "Full Stack Developer", company: "Google", role: "Full Stack Developer", description: "Develop innovative user-facing features on massive cloud-powered backends.", requiredSkills: ["JavaScript", "Angular", "Node.js", "Cloud"], experienceLevel: "Mid Level", location: "Bangalore, India", url: "https://careers.google.com" },
+                { id: "fs_hm_4", title: "Full Stack Engineer", company: "Infosys", role: "Full Stack Developer", description: "Maintain and extend microservice architecture using highly scalable frontends.", requiredSkills: ["Java", "Spring Boot", "React", "SQL"], experienceLevel: "Mid Level", location: "Pune, India", url: "https://www.infosys.com/careers" },
+                { id: "fs_hm_5", title: "Full Stack Developer", company: "Capgemini", role: "Full Stack Developer", description: "Provide comprehensive solutions from API creation to DOM manipulation.", requiredSkills: ["Node.js", "React", "MongoDB", "REST API"], experienceLevel: "Mid Level", location: "Mumbai, India", url: "https://www.capgemini.com/careers" },
+                { id: "fs_hm_6", title: "Senior Full Stack Developer", company: "Oracle", role: "Full Stack Developer", description: "Architect distributed systems coupled with performant front-end frameworks.", requiredSkills: ["Java", "React", "Microservices", "Oracle DB"], experienceLevel: "Senior Level", location: "Hyderabad, India", url: "https://www.oracle.com/careers" }
+              ];
+              const needed = 5 - addedFsCount;
+              allJobs.push(...fallbackFSJobs.slice(0, needed));
+            }
           }
         }
         
@@ -106,17 +280,17 @@ const JobMatching = () => {
 
   const checkSkillMatch = (skill: string) => {
     const sLow = skill.toLowerCase();
-    return userSkills.some(uSkill => sLow.includes(uSkill) || uSkill.includes(sLow));
+    return allUserSkills.some(uSkill => sLow.includes(uSkill) || uSkill.includes(sLow));
   };
 
   const getMatchBreakdown = (job: Job) => {
-    if (!job.requiredSkills || job.requiredSkills.length === 0) return { pct: 0, matched: [], missing: [] };
-    const matched = job.requiredSkills.filter(checkSkillMatch);
-    const missing = job.requiredSkills.filter(s => !checkSkillMatch(s));
-    let pct = Math.round((matched.length / job.requiredSkills.length) * 100);
-    // Add a slightly optimistic baseline match for real jobs so it doesn't always say 0%
-    if (pct < 15) pct += Math.floor(Math.random() * 20) + 10;
-    pct = Math.min(100, pct); // clamp at 100
+    let required = job.requiredSkills || [];
+    if (required.length === 0) return { pct: 0, matched: [], missing: [] };
+    
+    let matched = required.filter(checkSkillMatch);
+    let missing = required.filter(s => !checkSkillMatch(s));
+
+    let pct = Math.round((matched.length / required.length) * 100);
     return { pct, matched, missing };
   };
 
@@ -184,13 +358,27 @@ const JobMatching = () => {
                           Apply Now
                         </a>
                       </Button>
-                      <Badge variant={pct >= 70 ? "default" : pct >= 40 ? "secondary" : "outline"} className="text-sm">
+                      <Badge 
+                        className={`text-sm text-white ${
+                          pct >= 70 ? "bg-emerald-500 hover:bg-emerald-600" : 
+                          pct >= 40 ? "bg-amber-500 hover:bg-amber-600" : 
+                          "bg-red-500 hover:bg-red-600"
+                        }`}
+                      >
                         {pct}% Match
                       </Badge>
                     </div>
                   </div>
                   
-                  <Progress value={pct} className="mt-3 h-1.5" />
+                  <Progress 
+                    value={pct} 
+                    className="mt-3 h-1.5" 
+                    indicatorClassName={
+                      pct >= 70 ? "bg-emerald-500" : 
+                      pct >= 40 ? "bg-amber-500" : 
+                      "bg-red-500"
+                    }
+                  />
 
                   {isExpanded && (
                     <div className="mt-4 animate-fade-in">

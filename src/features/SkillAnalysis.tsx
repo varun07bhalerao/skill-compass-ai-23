@@ -118,25 +118,22 @@ const SkillAnalysis = () => {
             }
           }
 
-          // Rule: Only consider roles where min 2 skills match
-          if (matched.length >= 2 || requiredSkills.length === 0) {
-            let score = 0;
-            if (requiredSkills.length > 0) {
-              score = Math.round((matched.length / requiredSkills.length) * 100);
-            }
-
-            let level = "Beginner";
-            if (score >= 70) level = "Job Ready";
-            else if (score >= 40) level = "Intermediate";
-
-            processed.push({
-              roleName: role.roleName,
-              matchedSkills: matched,
-              missingSkills: missing,
-              readinessScore: score,
-              level,
-            });
+          let score = 0;
+          if (requiredSkills.length > 0) {
+            score = Math.round((matched.length / requiredSkills.length) * 100);
           }
+
+          let level = "Beginner";
+          if (score >= 70) level = "Job Ready";
+          else if (score >= 40) level = "Intermediate";
+
+          processed.push({
+            roleName: role.roleName,
+            matchedSkills: matched,
+            missingSkills: missing,
+            readinessScore: score,
+            level,
+          });
         }
 
         // 4. Sort and Top 3
@@ -263,9 +260,9 @@ const SkillAnalysis = () => {
               <div className="relative flex h-40 w-40 items-center justify-center rounded-full border-[6px] border-blue-600 mb-6 shadow-sm">
                 <div className="flex flex-col items-center">
                   <span className="font-display text-5xl font-bold text-slate-900 leading-none mb-1">
-                    {targetRoleMatch.readinessScore}
+                    {targetRoleMatch.readinessScore}<span className="text-3xl">%</span>
                   </span>
-                  <span className="text-sm font-medium text-slate-400">/100</span>
+                  <span className="text-sm font-medium text-slate-400">Match</span>
                 </div>
               </div>
               <Badge
@@ -331,14 +328,24 @@ const SkillAnalysis = () => {
                 <CardTitle className="text-lg font-semibold text-slate-900">
                   {role.roleName}
                 </CardTitle>
-                <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white rounded font-bold px-2.5">
-                  {role.readinessScore}%
+                <Badge 
+                  className={`text-white rounded font-bold px-2.5 ${
+                    role.readinessScore >= 70 ? 'bg-emerald-500 hover:bg-emerald-600' :
+                    role.readinessScore >= 40 ? 'bg-amber-500 hover:bg-amber-600' :
+                    'bg-slate-400 hover:bg-slate-500'
+                  }`}
+                >
+                  {role.readinessScore}% Match
                 </Badge>
               </div>
               <Progress
                 value={role.readinessScore}
                 className="h-2 bg-slate-100"
-                indicatorClassName={index === 0 ? "bg-blue-600" : "bg-emerald-500"}
+                indicatorClassName={
+                  role.readinessScore >= 70 ? "bg-emerald-500" :
+                  role.readinessScore >= 40 ? "bg-amber-500" :
+                  "bg-slate-400"
+                }
               />
             </CardHeader>
             <CardContent className="pt-4 flex-1">
@@ -366,7 +373,11 @@ const SkillAnalysis = () => {
                     <Badge
                       key={skill}
                       variant="outline"
-                      className="bg-red-50/50 border-red-100 text-red-600 font-medium py-1 px-2 text-xs flex items-center gap-1.5"
+                      className="bg-red-50/50 border-red-100 text-red-600 font-medium py-1 px-2 text-xs flex items-center gap-1.5 cursor-pointer hover:bg-red-100 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate("/courses", { state: { skill } });
+                      }}
                     >
                       <AlertTriangle className="h-3 w-3 text-red-500" /> {skill}
                     </Badge>

@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel, SelectSeparator } from "@/components/ui/select";
 import { CheckCircle2, Clock, ExternalLink, PlayCircle, Star, Target, Award } from "lucide-react";
 import { domainsData, DomainKey } from "@/lib/roadmap-data";
 import { useAuth } from "@/lib/auth-context";
@@ -172,6 +172,7 @@ const Courses = () => {
   const [activeDomain, setActiveDomain] = useState<DomainKey>("Software Developer");
   const [activeSkill, setActiveSkill] = useState<string>("HTML5");
   const [searchMode, setSearchMode] = useState<"domain" | "skill">("domain");
+  const [missingSkills, setMissingSkills] = useState<string[]>([]);
 
   const toggleComplete = (courseId: string) => {
     if (!user) return;
@@ -216,8 +217,13 @@ const Courses = () => {
       try {
         const docRef = doc(db, "userProfiles", user.email);
         const docSnap = await getDoc(docRef);
-        if (docSnap.exists() && docSnap.data().careerGoal) {
-          const rawGoal = docSnap.data().careerGoal;
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.missingSkills) {
+            setMissingSkills(data.missingSkills);
+          }
+          if (data.careerGoal) {
+            const rawGoal = data.careerGoal;
           const legacyGoalMap: Record<string, string> = {
             "frontend": "Frontend Developer",
             "backend": "Backend Developer",
@@ -259,6 +265,7 @@ const Courses = () => {
             }
           }
         }
+        }
       } catch (err) {
         console.error("Error fetching user goal:", err);
       }
@@ -288,7 +295,10 @@ const Courses = () => {
   };
 
   const currentSkillData = getSkillData(activeSkill);
-  const domainSkills = Array.from(new Set(currentData?.roadmapStages?.flatMap(stage => stage.skills) || []));
+  const baseDomainSkills = Array.from(new Set(currentData?.roadmapStages?.flatMap(stage => stage.skills) || []));
+  const domainSkills = activeSkill && !baseDomainSkills.includes(activeSkill) 
+    ? [activeSkill, ...baseDomainSkills] 
+    : baseDomainSkills;
 
   const DomainIcon = currentData.icon;
 
@@ -364,13 +374,28 @@ const Courses = () => {
                 <SelectValue placeholder="Select a Skill" />
               </SelectTrigger>
               <SelectContent>
-                {domainSkills.length > 0 ? domainSkills.map((skill) => (
-                  <SelectItem key={skill} value={skill}>
-                    {skill}
-                  </SelectItem>
-                )) : (
-                  <SelectItem value={activeSkill}>{activeSkill}</SelectItem>
+                {missingSkills.length > 0 && (
+                  <SelectGroup>
+                    <SelectLabel className="text-red-500 font-bold">Your Missing Skills</SelectLabel>
+                    {missingSkills.map((skill) => (
+                      <SelectItem key={`missing-${skill}`} value={skill}>
+                        {skill}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 )}
+                {missingSkills.length > 0 && <SelectSeparator />}
+                
+                <SelectGroup>
+                  <SelectLabel className="text-primary font-bold">Domain Skills</SelectLabel>
+                  {domainSkills.length > 0 ? domainSkills.filter(skill => !missingSkills.includes(skill)).map((skill) => (
+                    <SelectItem key={`domain-${skill}`} value={skill}>
+                      {skill}
+                    </SelectItem>
+                  )) : (
+                    !missingSkills.includes(activeSkill) && <SelectItem value={activeSkill}>{activeSkill}</SelectItem>
+                  )}
+                </SelectGroup>
               </SelectContent>
             </Select>
           </div>
