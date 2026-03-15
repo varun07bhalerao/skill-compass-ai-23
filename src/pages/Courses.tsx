@@ -10,7 +10,9 @@ import { domainsData, DomainKey } from "@/lib/roadmap-data";
 import { useAuth } from "@/lib/auth-context";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
-import { BookOpen, Code2 } from "lucide-react";const topSkillsData: Record<string, {
+import { BookOpen, Code2 } from "lucide-react";
+
+export const topSkillsData: Record<string, {
   description: string;
   freeCourses: { name: string, platform: string, link: string }[];
   paidCourses: { name: string, platform: string, link: string, reason: string }[];

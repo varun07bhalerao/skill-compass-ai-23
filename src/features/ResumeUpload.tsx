@@ -3,7 +3,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useLanguage } from "@/lib/i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { User, Mail, Briefcase, GraduationCap, Loader2 } from "lucide-react";
+import { User, Mail, Briefcase, GraduationCap, Loader2, Target } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { supabase } from "@/integrations/supabase/client";
@@ -94,6 +94,7 @@ const ResumeUpload = () => {
         // Ensure name and email are pulled from the database form if the parser failed to grab them
         parsed.name = parsed.name || docSnap.data().fullName || user.name;
         parsed.email = parsed.email || user.email;
+        parsed.jobRole = docSnap.data().careerGoal;
 
         // Normalize skills format
         parsed.skills = parsed.skills.map((s) => ({
@@ -175,6 +176,14 @@ const ResumeUpload = () => {
                 </div>
                 <span className="font-medium">{parsedData.email}</span>
               </div>
+              {parsedData.jobRole && (
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                    <Target className="h-4 w-4 text-primary" />
+                  </div>
+                  <span className="font-medium">{parsedData.jobRole}</span>
+                </div>
+              )}
             </CardContent>
           </Card>
 

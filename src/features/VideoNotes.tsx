@@ -14,7 +14,7 @@ const VideoNotes = () => {
   const [url, setUrl] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [notes, setNotes] = useState<VideoNote[]>(() => {
-    const saved = localStorage.getItem("skillbridge-video-notes");
+  const saved = localStorage.getItem("skillbridge-video-notes");
     return saved ? JSON.parse(saved) : [];
   });
   const [copiedNoteUrl, setCopiedNoteUrl] = useState<string | null>(null);

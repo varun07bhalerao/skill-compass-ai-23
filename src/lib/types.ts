@@ -18,6 +18,7 @@ export interface Education {
 export interface ParsedResume {
   name: string;
   email: string;
+  jobRole?: string;
   skills: Skill[];
   experience: Experience[];
   education: Education[];
