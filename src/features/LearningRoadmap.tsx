@@ -244,9 +244,17 @@ const LearningRoadmap = () => {
               id="weeks" 
               type="number" 
               min={4} 
-              max={24} 
-              value={weeks} 
-              onChange={(e) => setWeeks(Number(e.target.value))} 
+              max={12} 
+              value={weeks || ""} 
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                if (val > 12) {
+                  import("sonner").then(({ toast }) => toast.error("Maximum duration allowed is 12 weeks"));
+                  setWeeks(12);
+                } else {
+                  setWeeks(val);
+                }
+              }} 
               className="w-20"
             />
           </div>
