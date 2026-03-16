@@ -6,12 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, BookOpen, Award, CheckCircle2, Star } from "lucide-react";
+import { TrendingUp, BookOpen, Award, CheckCircle2, Star, Download } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useNavigate } from "react-router-dom";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import { topSkillsData } from "@/pages/Courses";
+import { jsPDF } from "jspdf";
+import { toast } from "sonner";
+import { domainsData } from "@/lib/roadmap-data";
 
 const ProgressTracking = () => {
   const { user } = useAuth();
@@ -89,27 +92,56 @@ const ProgressTracking = () => {
   
   // Resolve actual course details for UI list
   const getResolvedCourses = () => {
-    if (!user?.completedCourses || missingSkills.length === 0) return [];
+    if (!user?.completedCourses || user.completedCourses.length === 0) return [];
     
     const resolved: { id: string, title: string, provider: string, skill: string }[] = [];
     
-    missingSkills.forEach(skill => {
-      const skillData = topSkillsData[skill];
-      if (!skillData) return;
-      
-      skillData.freeCourses.forEach((c, idx) => {
-        const id = `skill-free-${skill}-${idx}`;
-        if (user.completedCourses.includes(id)) {
-          resolved.push({ id, title: c.name, provider: c.platform, skill });
+    user.completedCourses.forEach((courseId: string) => {
+      if (courseId.startsWith('skill-free-')) {
+        const parts = courseId.replace('skill-free-', '').split('-');
+        const skill = parts.slice(0, -1).join('-');
+        const idx = parseInt(parts[parts.length - 1], 10);
+        const course = topSkillsData[skill]?.freeCourses?.[idx];
+        if (course) {
+          resolved.push({ id: courseId, title: course.name, provider: course.platform, skill });
         }
-      });
-      
-      skillData.paidCourses.forEach((c, idx) => {
-        const id = `skill-paid-${skill}-${idx}`;
-        if (user.completedCourses.includes(id)) {
-          resolved.push({ id, title: c.name, provider: c.platform, skill });
+      } else if (courseId.startsWith('skill-paid-')) {
+        const parts = courseId.replace('skill-paid-', '').split('-');
+        const skill = parts.slice(0, -1).join('-');
+        const idx = parseInt(parts[parts.length - 1], 10);
+        const course = topSkillsData[skill]?.paidCourses?.[idx];
+        if (course) {
+          resolved.push({ id: courseId, title: course.name, provider: course.platform, skill });
         }
-      });
+      } else if (courseId.startsWith('free-')) {
+        const parts = courseId.replace('free-', '').split('-');
+        const cIdx = parseInt(parts.pop() || "0", 10);
+        const stageIdx = parseInt(parts.pop() || "0", 10);
+        const domain = parts.join('-');
+        const stage = domainsData[domain as keyof typeof domainsData]?.roadmapStages?.[stageIdx];
+        const course = stage?.freeCourses?.[cIdx];
+        if (course) {
+          resolved.push({ id: courseId, title: course.name, provider: course.platform, skill: `${domain} Roadmap` });
+        }
+      } else if (courseId.startsWith('paid-')) {
+        const parts = courseId.replace('paid-', '').split('-');
+        const idx = parseInt(parts.pop() || "0", 10);
+        const domain = parts.join('-');
+        const course = domainsData[domain as keyof typeof domainsData]?.paidCourses?.[idx];
+        if (course) {
+          resolved.push({ id: courseId, title: course.name, provider: course.platform, skill: `${domain} Roadmap` });
+        }
+      } else if (courseId.startsWith('proj-')) {
+        const parts = courseId.replace('proj-', '').split('-');
+        const pIdx = parseInt(parts.pop() || "0", 10);
+        const stageIdx = parseInt(parts.pop() || "0", 10);
+        const domain = parts.join('-');
+        const stage = domainsData[domain as keyof typeof domainsData]?.roadmapStages?.[stageIdx];
+        const project = stage?.projects?.[pIdx];
+        if (project) {
+          resolved.push({ id: courseId, title: project, provider: "Project", skill: `${domain} Roadmap` });
+        }
+      }
     });
     
     return resolved;
@@ -154,6 +186,92 @@ const ProgressTracking = () => {
     { id: "milestone", icon: "🏆", title: "Milestone Master", desc: "Completed a roadmap milestone", condition: (u: any) => (u?.completedMilestones?.length || 0) >= 1 },
     { id: "job-ready", icon: "💼", title: "Job Ready", desc: "Reached Job-Ready score", condition: (u: any) => readinessScore >= 70 },
   ];
+
+  const handleGenerateReport = () => {
+    // validation
+    if (!targetRole || readinessScore === 0 || missingSkills.length === 0 || !user?.roadmap?.milestones) {
+      toast.error("Details are incorrect", {
+        description: "Please ensure all analysis and roadmap generation steps are completed before generating a report."
+      });
+      return;
+    }
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let yPos = 20;
+
+    // Title
+    doc.setFontSize(22);
+    doc.setTextColor(59, 130, 246); // primary color
+    doc.text("Progress Tracking Report", pageWidth / 2, yPos, { align: "center" });
+    yPos += 15;
+
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+
+    // Name
+    doc.setFont("helvetica", "bold");
+    doc.text("Name:", 20, yPos);
+    doc.setFont("helvetica", "normal");
+    doc.text(user?.name || user?.email || "N/A", 60, yPos);
+    yPos += 10;
+
+    // Career Goal
+    doc.setFont("helvetica", "bold");
+    doc.text("Career Goal:", 20, yPos);
+    doc.setFont("helvetica", "normal");
+    doc.text(targetRole || "N/A", 60, yPos);
+    yPos += 10;
+
+    // Job Readiness Score
+    doc.setFont("helvetica", "bold");
+    doc.text("Job Readiness Score:", 20, yPos);
+    doc.setFont("helvetica", "normal");
+    doc.text(`${readinessScore}/100`, 75, yPos);
+    yPos += 15;
+
+    // Missing Skills
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("Missing Skills:", 20, yPos);
+    yPos += 10;
+    
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+    const skillsText = missingSkills.join(", ");
+    const splitSkills = doc.splitTextToSize(skillsText, pageWidth - 40);
+    doc.text(splitSkills, 20, yPos);
+    yPos += splitSkills.length * 7 + 10;
+
+    // Recommended Roadmap
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("Recommended Roadmap:", 20, yPos);
+    yPos += 10;
+
+    doc.setFontSize(12);
+    user.roadmap.milestones.forEach((m: any) => {
+      if (yPos > 270) {
+        doc.addPage();
+        yPos = 20;
+      }
+      doc.setFont("helvetica", "bold");
+      doc.text(`Week ${m.weekStart}${m.weekEnd > m.weekStart ? `-${m.weekEnd}` : ''}: ${m.title}`, 20, yPos);
+      yPos += 7;
+      doc.setFont("helvetica", "normal");
+      
+      // Add tasks
+      m.tasks?.forEach((task: string) => {
+        const splitTask = doc.splitTextToSize(`• ${task}`, pageWidth - 50);
+        doc.text(splitTask, 25, yPos);
+        yPos += splitTask.length * 6;
+      });
+      yPos += 5;
+    });
+
+    doc.save("Progress_Report.pdf");
+    toast.success("Progress Report downloaded successfully!");
+  };
 
   return (
     <div className="container py-8">
@@ -224,7 +342,7 @@ const ProgressTracking = () => {
 
       {/* Completed courses list */}
       {completedCoursesList.length > 0 && (
-        <div className="mt-8">
+        <div className="mt-8 mb-8">
           <h2 className="mb-4 font-display text-xl font-bold">Completed Courses</h2>
           <div className="space-y-3">
             {completedCoursesList.map((c) => (
@@ -239,6 +357,17 @@ const ProgressTracking = () => {
           </div>
         </div>
       )}
+
+      {/* Generate Report Section */}
+      <div className="mt-12 flex flex-col items-center border-t pt-8">
+        <Button onClick={handleGenerateReport} size="lg" className="gap-2 mb-2 w-full sm:w-auto">
+          <Download className="h-5 w-5" />
+          Generate Report
+        </Button>
+        <p className="text-sm text-neutral-500 text-center max-w-md">
+          Note: after completing all features that will generate the progress report
+        </p>
+      </div>
     </div>
   );
 };
