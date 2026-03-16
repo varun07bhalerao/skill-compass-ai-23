@@ -8,7 +8,7 @@ import { AuthProvider } from "@/lib/auth-context";
 import Layout from "@/components/Layout";
 import Landing from "@/pages/Landing";
 import Login from "@/pages/Login";
-import Dashboard from "@/pages/Dashboard";
+import Dashboard from "@/features/Dashboard";
 import ResumeUpload from "@/features/ResumeUpload";
 import SkillAnalysis from "@/features/SkillAnalysis";
 import LearningRoadmap from "@/features/LearningRoadmap";

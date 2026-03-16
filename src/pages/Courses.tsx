@@ -11,6 +11,7 @@ import { useAuth } from "@/lib/auth-context";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { BookOpen, Code2 } from "lucide-react";
+import { QuizModal } from "@/components/QuizModal";
 
 export const topSkillsData: Record<string, {
   description: string;
@@ -175,6 +176,7 @@ const Courses = () => {
   const [activeSkill, setActiveSkill] = useState<string>("HTML5");
   const [searchMode, setSearchMode] = useState<"domain" | "skill">("domain");
   const [missingSkills, setMissingSkills] = useState<string[]>([]);
+  const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
 
   const toggleComplete = (courseId: string) => {
     if (!user) return;
@@ -574,7 +576,15 @@ const Courses = () => {
                     </div>
                   ))}
                 </div>
-                <div className="mt-10 text-center"><Button size="lg" className="rounded-full px-8 gap-2 font-semibold hover:shadow-lg transition-all"><CheckCircle2 className="h-5 w-5" /> Start Applying Mocks</Button></div>
+                <div className="mt-10 text-center">
+                  <Button 
+                    size="lg" 
+                    className="rounded-full px-8 gap-2 font-semibold hover:shadow-lg transition-all"
+                    onClick={() => setIsQuizModalOpen(true)}
+                  >
+                    <CheckCircle2 className="h-5 w-5" /> Start Applying Mocks
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -667,6 +677,13 @@ const Courses = () => {
           </div>
         </div>
       )}
+      
+      <QuizModal 
+        isOpen={isQuizModalOpen} 
+        onClose={() => setIsQuizModalOpen(false)} 
+        domain={activeDomain}
+        domainData={currentData}
+      />
     </div>
   );
 };

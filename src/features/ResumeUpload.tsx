@@ -14,7 +14,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import mammoth from 'mammoth';
 
 // Set up pdf.js worker - matching the exact import style from skills_inputs_data
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.js?url';
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 const extractTextFromUrl = async (url: string): Promise<string> => {
