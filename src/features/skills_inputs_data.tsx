@@ -340,10 +340,16 @@ export default function SkillsInputsData() {
                                         <SelectItem value="Frontend Developer">Frontend Developer</SelectItem>
                                         <SelectItem value="Backend Developer">Backend Developer</SelectItem>
                                         <SelectItem value="Full Stack Developer">Full Stack Developer</SelectItem>
-                                        <SelectItem value="Data Analyst">Data Analyst</SelectItem>
-                                        <SelectItem value="UI/UX Designer">UI/UX Designer</SelectItem>
-                                        <SelectItem value="Cybersecurity Analyst">Cybersecurity Analyst</SelectItem>
-                                        <SelectItem value="SAP Consultant">SAP Consultant</SelectItem>
+                                        <SelectItem value="Data Analytics">Data Analytics</SelectItem>
+                                        <SelectItem value="AIML Engineer">AIML Engineer</SelectItem>
+                                        <SelectItem value="Android Developer">Android Developer</SelectItem>
+                                        <SelectItem value="Automation Engineer">Automation Engineer</SelectItem>
+                                        <SelectItem value="Cloud Architect Engineer">Cloud Architect Engineer</SelectItem>
+                                        <SelectItem value="Cyber Security Specialist">Cyber Security Specialist</SelectItem>
+                                        <SelectItem value="Data Engineer">Data Engineer</SelectItem>
+                                        <SelectItem value="Data Scientist">Data Scientist</SelectItem>
+                                        <SelectItem value="DevOps Engineer">DevOps Engineer</SelectItem>
+                                        <SelectItem value="Generative AI Specialist">Generative AI Specialist</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

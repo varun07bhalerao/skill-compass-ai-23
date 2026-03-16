@@ -14,7 +14,6 @@ import SkillAnalysis from "@/features/SkillAnalysis";
 import LearningRoadmap from "@/features/LearningRoadmap";
 import Courses from "@/pages/Courses";
 import JobMatching from "@/features/JobMatching";
-import VideoNotes from "@/features/VideoNotes";
 import ProgressTracking from "@/features/ProgressTracking";
 import NotFound from "@/pages/NotFound";
 import SkillsInputsData from "@/features/skills_inputs_data";
@@ -39,7 +38,6 @@ const App = () => (
                 <Route path="/roadmap" element={<LearningRoadmap />} />
                 <Route path="/courses" element={<Courses />} />
                 <Route path="/jobs" element={<JobMatching />} />
-                <Route path="/video-notes" element={<VideoNotes />} />
                 <Route path="/progress" element={<ProgressTracking />} />
                 <Route path="/skill-profile" element={<SkillsInputsData />} />
                 <Route path="*" element={<NotFound />} />

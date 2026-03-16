@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, FileText, Target, Map, BookOpen, Briefcase,
-  Video, TrendingUp, Menu, X, Globe, LogOut, LogIn
+  TrendingUp, Menu, X, Globe, LogOut, LogIn
 } from "lucide-react";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
@@ -22,7 +22,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { path: "/roadmap", label: t("nav.roadmap"), icon: Map },
     { path: "/courses", label: t("nav.courses"), icon: BookOpen },
     { path: "/jobs", label: t("nav.jobs"), icon: Briefcase },
-    { path: "/video-notes", label: t("nav.video"), icon: Video },
     { path: "/progress", label: t("nav.progress"), icon: TrendingUp },
   ];
 
