@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { BookOpen, Code2 } from "lucide-react";
 import { QuizModal } from "@/components/QuizModal";
+import { QuizAssessment } from "@/features/QuizAssessment";
 
 export const topSkillsData: Record<string, {
   description: string;
@@ -177,6 +178,8 @@ const Courses = () => {
   const [searchMode, setSearchMode] = useState<"domain" | "skill">("domain");
   const [missingSkills, setMissingSkills] = useState<string[]>([]);
   const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "roadmap");
 
   const toggleComplete = (courseId: string) => {
     if (!user) return;
@@ -277,6 +280,18 @@ const Courses = () => {
 
     fetchUserGoal();
   }, [location.state, user?.email]);
+
+  useEffect(() => {
+    const tabFromUrl = searchParams.get("tab");
+    if (tabFromUrl && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    setSearchParams({ tab: value });
+  };
 
   const currentData = domainsData[activeDomain];
   
@@ -407,12 +422,12 @@ const Courses = () => {
       </div>
 
       {searchMode === "domain" ? (
-        <Tabs defaultValue="roadmap" className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <div className="flex justify-center mb-8">
             <TabsList className="grid w-full max-w-md grid-cols-3">
               <TabsTrigger value="roadmap">Learning Path</TabsTrigger>
-              <TabsTrigger value="paid">Preimum Courses</TabsTrigger>
-              <TabsTrigger value="job-prep">Job Prep</TabsTrigger>
+              <TabsTrigger value="paid">Premium Courses</TabsTrigger>
+              <TabsTrigger value="quiz">Quiz Assessment</TabsTrigger>
             </TabsList>
           </div>
 
@@ -553,40 +568,12 @@ const Courses = () => {
                     </div>
                   </CardContent>
                 </Card>
-              )})}
+                )})}
             </div>
           </TabsContent>
 
-          <TabsContent value="job-prep" className="animate-in slide-in-from-bottom-4 duration-500">
-            <Card className="border-0 shadow-xl overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-indigo-950/20 dark:via-background dark:to-purple-950/20">
-              <CardHeader className="text-center pb-8 pt-10">
-                <div className="mx-auto bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mb-4"><Award className="h-8 w-8 text-primary" /></div>
-                <CardTitle className="text-3xl font-bold">Passing the Interview</CardTitle>
-                <CardDescription className="text-base max-w-xl mx-auto mt-2">Learning to code is only half the battle. Passing the interview is the remaining 50%.</CardDescription>
-              </CardHeader>
-              <CardContent className="px-6 md:px-12 pb-12">
-                <div className="space-y-6">
-                  {currentData.jobPrepTips.map((tip, idx) => (
-                    <div key={`${activeDomain}-${idx}`} className="flex gap-4 p-4 rounded-xl bg-white/60 dark:bg-background/60 shadow-sm border backdrop-blur-sm hover:shadow-md transition-all animate-fade-in" style={{ animationDelay: `${idx * 100}ms` }}>
-                      <div className="bg-indigo-100 dark:bg-indigo-900/30 p-3 rounded-lg h-fit">{tip.icon}</div>
-                      <div>
-                        <h4 className="text-lg font-bold mb-1 tracking-tight">{tip.title}</h4>
-                        <p className="text-muted-foreground text-sm leading-relaxed">{tip.description}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-10 text-center">
-                  <Button 
-                    size="lg" 
-                    className="rounded-full px-8 gap-2 font-semibold hover:shadow-lg transition-all"
-                    onClick={() => setIsQuizModalOpen(true)}
-                  >
-                    <CheckCircle2 className="h-5 w-5" /> Start Applying Mocks
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="quiz" className="animate-in slide-in-from-bottom-4 duration-500">
+            <QuizAssessment />
           </TabsContent>
         </Tabs>
       ) : (

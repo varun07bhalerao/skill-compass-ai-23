@@ -15,6 +15,16 @@ import { doc, getDoc, collection, query, where, getDocs } from "firebase/firesto
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { FeedbackModal } from "./FeedbackModal";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const LearningRoadmap = () => {
   const { user, updateUser } = useAuth();
@@ -24,8 +34,9 @@ const LearningRoadmap = () => {
   const [weeks, setWeeks] = useState(8);
   const [targetRole, setTargetRole] = useState<string>("");
 
-  // Feedback Modal State
+  // Modals State
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showQuizPrompt, setShowQuizPrompt] = useState(false);
 
   const roadmap = user?.roadmap;
 
@@ -183,33 +194,10 @@ const LearningRoadmap = () => {
         const nextMilestone = roadmap.milestones[currentIndex + 1];
         nextStep = `Next step: ${nextMilestone.title}.`;
         toast.success(`You've closed ${percentage}% of your gaps. ${nextStep}`);
-      } else {
+      } else if (percentage === 100) {
         // Entire roadmap completed!
-        toast.success(`You've closed ${percentage}% of your gaps. ${nextStep}`);
-        
-        // Before showing modal, check if feedback is already submitted
-        if (user?.email && targetRole) {
-          const feedbackRef = collection(db, "roadmapFeedback");
-          const q = query(
-            feedbackRef, 
-            where("userEmail", "==", user?.email),
-            where("targetRole", "==", targetRole)
-          );
-          try {
-            const querySnapshot = await getDocs(q);
-            if (!querySnapshot.empty) {
-              toast.info("You've already provided feedback for this roadmap. Thanks again!");
-            } else {
-              setTimeout(() => setShowFeedbackModal(true), 1500); // Show modal after a brief delay
-            }
-          } catch (err) {
-            console.error(err);
-            // On error, degrade gracefully by showing modal
-            setTimeout(() => setShowFeedbackModal(true), 1500); 
-          }
-        } else {
-          setTimeout(() => setShowFeedbackModal(true), 1500);
-        }
+        toast.success(`You've closed 100% of your gaps. Outstanding!`);
+        setTimeout(() => setShowQuizPrompt(true), 1500);
       }
     } else {
       const percentage = Math.round((completedIds.length / roadmap.milestones.length) * 100);
@@ -380,6 +368,28 @@ const LearningRoadmap = () => {
         userEmail={user?.email || undefined}
         targetRole={targetRole}
       />
+
+      {/* Quiz Prompt */}
+      <AlertDialog open={showQuizPrompt} onOpenChange={setShowQuizPrompt}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Roadmap Completed</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have successfully completed the learning roadmap for this role.
+              Test your knowledge by taking the Skill Assessment Quiz.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowFeedbackModal(true)}>Later</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              setShowQuizPrompt(false);
+              navigate("/courses?tab=quiz");
+            }}>
+              Take Quiz
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

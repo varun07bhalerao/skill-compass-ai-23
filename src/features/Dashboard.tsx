@@ -18,6 +18,7 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import { topSkillsData } from "@/pages/Courses";
 import { domainsData } from "@/lib/roadmap-data";
+import { normalizeSkill } from "@/lib/seed-data";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -63,6 +64,18 @@ const Dashboard = () => {
             uiux: "UI/UX Designer",
             cybersecurity: "Cybersecurity Analyst",
             sap: "SAP Consultant",
+            "Frontend Developer": "Frontend Developer",
+            "Backend Developer": "Backend Developer",
+            "Full Stack Developer": "Full Stack Developer",
+            "Data Analytics": "Data Analytics",
+            "AIML Engineer": "AIML Engineer",
+            "Android Developer": "Android Developer",
+            "Automation Engineer": "Automation Engineer",
+            "Cloud Architect Engineer": "Cloud Architect Engineer",
+            "Cyber Security Specialist": "Cyber Security Specialist",
+            "Data Scientist": "Data Scientist",
+            "DevOps Engineer": "DevOps Engineer",
+            "Generative AI Specialist": "Generative AI Specialist",
           };
           cGoal = goalMap[cGoal] || cGoal;
           setTargetRole(cGoal);
@@ -101,14 +114,19 @@ const Dashboard = () => {
           const roleMatch = allRoles.find(r => r.roleName.toLowerCase().includes(cGoal.toLowerCase()));
           
           if (roleMatch) {
-            const lowerUserSkills = pSkills.map(s => s.toLowerCase().trim());
+            const normalizedUserSkills = pSkills.map(s => normalizeSkill(s).toLowerCase().trim());
             const requiredSkills = roleMatch.requiredSkills || [];
-            const matched = requiredSkills.filter(req => lowerUserSkills.includes(req.toLowerCase().trim()));
+            const matched = requiredSkills.filter(req => {
+              const normalizedReq = normalizeSkill(req).toLowerCase().trim();
+              return normalizedUserSkills.includes(normalizedReq);
+            });
             if (requiredSkills.length > 0) {
               setReadinessScore(Math.round((matched.length / requiredSkills.length) * 100));
+            } else {
+              setReadinessScore(0);
             }
           } else {
-             setReadinessScore(61); // fallback to match UI screenshot
+             setReadinessScore(0);
           }
 
           // Calculate Real-Time Trending Skills
@@ -137,16 +155,23 @@ const Dashboard = () => {
             });
 
           setTrendingSkills(sortedSkills.length > 0 ? sortedSkills : [
-              { skill: "React", demand: 92 },
-              { skill: "Python", demand: 88 },
-              { skill: "TypeScript", demand: 85 }
+              { skill: "React", demand: 94 },
+              { skill: "Python", demand: 89 },
+              { skill: "TypeScript", demand: 86 },
+              { skill: "SQL", demand: 82 },
+              { skill: "Node.js", demand: 78 },
+              { skill: "AWS", demand: 75 }
           ]);
 
         } else {
-            setReadinessScore(61); // UI match fallback
+            setReadinessScore(0);
             setTrendingSkills([
-              { skill: "React", demand: 92 },
-              { skill: "Python", demand: 88 }
+              { skill: "React", demand: 94 },
+              { skill: "Python", demand: 89 },
+              { skill: "TypeScript", demand: 86 },
+              { skill: "SQL", demand: 82 },
+              { skill: "Node.js", demand: 78 },
+              { skill: "AWS", demand: 75 }
             ]);
         }
       } catch (err) {
@@ -162,30 +187,29 @@ const Dashboard = () => {
         <div className="mx-auto max-w-md animate-fade-in">
           <FileText className="mx-auto mb-4 h-16 w-16 text-muted-foreground/50" />
           <h2 className="mb-2 font-display text-2xl font-bold">{t("dashboard.title")}</h2>
-          <p className="mb-6 text-muted-foreground">Upload your resume to see your personalized dashboard.</p>
-          <Button onClick={() => navigate("/resume")}>{t("resume.upload")}</Button>
+          <p className="mb-6 text-muted-foreground">Upload your resume or complete your profile to see your personalized dashboard.</p>
+          <div className="flex flex-wrap justify-center gap-4">
+            <Button onClick={() => navigate("/resume")}>{t("resume.upload")}</Button>
+            <Button variant="outline" onClick={() => navigate("/skill-profile")}>Complete Setup</Button>
+          </div>
         </div>
       </div>
     );
   }
 
   // To precisely match the UI screenshot provided
-  const rScore = readinessScore > 0 ? readinessScore : 61; 
+  const rScore = readinessScore; 
   const rBand = rScore >= 70 ? "Job Ready" : rScore >= 40 ? "Intermediate" : "Beginner";
   const rColor = rScore >= 70 ? "hsl(142, 71%, 45%)" : rScore >= 40 ? "hsl(38, 92%, 50%)" : "hsl(348, 83%, 47%)";
   
   const gaugeData = [{ name: "Score", value: rScore, fill: rColor }];
-  
-  const skillCoverage = 33;
-  const experienceLvl = 60;
-  const educationMatch = 75;
 
         // Provide default fallback if user has no skills at all, but normally fetched from DB
-        let displaySkills = [];
+        let displaySkills: string[] = [];
         if (parsedSkills.length > 0) {
-            displaySkills = parsedSkills.slice(0, 8).map((s, idx) => ({ skill: s, proficiency: Math.max(70, 95 - idx * 5) }));
+            displaySkills = parsedSkills.slice(0, 15);
         } else if (user?.resume?.skills) {
-             displaySkills = user.resume.skills.slice(0, 8);
+             displaySkills = user.resume.skills.slice(0, 15).map((s: any) => typeof s === 'string' ? s : s.skill);
         }
 
   // Calculate Roadmap Progress
@@ -264,71 +288,110 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent className="flex flex-col items-center flex-1 justify-between pb-6 pt-2">
               <div className="relative flex flex-col items-center">
-                <div className="h-44 w-44">
+                <div className="h-64 w-64">
                   <ResponsiveContainer>
-                    <RadialBarChart cx="50%" cy="50%" innerRadius="70%" outerRadius="100%" startAngle={180} endAngle={0} data={gaugeData}>
+                    <RadialBarChart cx="50%" cy="50%" innerRadius="80%" outerRadius="100%" startAngle={180} endAngle={0} data={gaugeData}>
                       <RadialBar background dataKey="value" cornerRadius={10} />
                     </RadialBarChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="absolute top-20 text-center w-full">
-                  <p className="font-display text-5xl font-bold text-slate-900">{rScore}</p>
+                <div className="absolute top-28 text-center w-full">
+                  <p className="font-display text-6xl font-bold text-slate-900">{rScore}</p>
                   <Badge className={`mt-2 ${rColor.includes("38") ? 'bg-emerald-500 hover:bg-emerald-600' : ''} text-white border-0 px-3 py-0.5`}>
                     {rBand}
                   </Badge>
                 </div>
               </div>
               
-              <div className="w-full space-y-4 mt-2">
-                <div>
-                  <div className="mb-1.5 flex justify-between text-xs font-medium text-slate-600"><span>Skill Coverage</span><span>{skillCoverage}%</span></div>
-                  <Progress value={skillCoverage} className="h-1.5 bg-slate-200" indicatorClassName="bg-blue-600" />
-                </div>
-                <div>
-                  <div className="mb-1.5 flex justify-between text-xs font-medium text-slate-600"><span>Experience</span><span>{experienceLvl}%</span></div>
-                  <Progress value={experienceLvl} className="h-1.5 bg-slate-200" indicatorClassName="bg-blue-600" />
-                </div>
-                <div>
-                  <div className="mb-1.5 flex justify-between text-xs font-medium text-slate-600"><span>Education</span><span>{educationMatch}%</span></div>
-                  <Progress value={educationMatch} className="h-1.5 bg-slate-200" indicatorClassName="bg-blue-600" />
-                </div>
+              <div className="w-full text-center mt-4">
+                <p className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-1">Target Role</p>
+                <p className="font-display text-lg font-bold text-slate-800 mb-4">{targetRole || "Not Set"}</p>
+                <Button 
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                  onClick={() => navigate("/roadmap")}
+                >
+                  Start Learning
+                </Button>
               </div>
             </CardContent>
           </Card>
 
-          {/* Skills */}
-          <Card className="border-0 shadow-sm rounded-xl animate-fade-in" style={{ animationDelay: "200ms" }}>
-            <CardHeader className="pb-4">
-              <CardTitle className="font-display text-lg text-slate-800 font-semibold">Your Skills</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {displaySkills.map((s) => (
-                <div key={s.skill}>
-                  <div className="mb-1.5 flex justify-between text-sm font-medium">
-                    <span className="text-slate-700">{s.skill}</span>
-                    <span className="text-slate-500">{s.proficiency}%</span>
-                  </div>
-                  <Progress value={s.proficiency} className="h-1.5 bg-emerald-400" indicatorClassName="bg-blue-600" />
+          <Card className="border-0 shadow-sm rounded-xl animate-fade-in bg-white h-full overflow-hidden group" style={{ animationDelay: "200ms" }}>
+            <CardHeader className="pb-4 border-b border-slate-50 bg-slate-50/50">
+              <div className="flex items-center justify-between">
+                <CardTitle className="font-display text-lg text-slate-800 font-semibold">Your Skills</CardTitle>
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100/50 text-blue-600">
+                  <Award className="h-4 w-4" />
                 </div>
-              ))}
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-2 gap-3">
+                {displaySkills.map((skill, idx) => {
+                  const colors = [
+                    "from-blue-500/10 to-blue-600/5 text-blue-700 border-blue-100",
+                    "from-emerald-500/10 to-emerald-600/5 text-emerald-700 border-emerald-100",
+                    "from-purple-500/10 to-purple-600/5 text-purple-700 border-purple-100",
+                    "from-indigo-500/10 to-indigo-600/5 text-indigo-700 border-indigo-100",
+                    "from-amber-500/10 to-amber-600/5 text-amber-700 border-amber-100"
+                  ];
+                  const colorClass = colors[idx % colors.length];
+                  
+                  return (
+                    <div 
+                      key={skill} 
+                      className={`group/skill relative flex items-center gap-3 p-3 rounded-xl border bg-gradient-to-br ${colorClass} transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 cursor-default`}
+                    >
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/80 shadow-sm transition-transform duration-300 group-hover/skill:rotate-12">
+                        <CheckCircle2 className="h-4 w-4" />
+                      </div>
+                      <span className="text-xs font-bold truncate tracking-tight">{skill}</span>
+                      <div className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-current opacity-20" />
+                    </div>
+                  );
+                })}
+              </div>
+              {displaySkills.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-10 text-center opacity-50">
+                  <BookOpen className="h-10 w-10 mb-2" />
+                  <p className="text-sm">No skills detected yet</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          {/* Trending Skills */}
-          <Card className="border-0 shadow-sm rounded-xl animate-fade-in" style={{ animationDelay: "300ms" }}>
-            <CardHeader className="pb-4">
-              <CardTitle className="font-display text-lg text-slate-800 font-semibold">Trending Skills</CardTitle>
+          <Card className="border-0 shadow-sm rounded-xl animate-fade-in bg-white h-full" style={{ animationDelay: "300ms" }}>
+            <CardHeader className="pb-4 border-b border-slate-50 bg-slate-50/50">
+              <div className="flex items-center justify-between">
+                <CardTitle className="font-display text-lg text-slate-800 font-semibold">Trending Skills</CardTitle>
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100/50 text-indigo-600">
+                  <TrendingUp className="h-4 w-4" />
+                </div>
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="h-72">
-                <ResponsiveContainer>
-                  <BarChart data={trendingSkills} layout="vertical" margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                    <XAxis type="number" domain={[0, 100]} hide />
-                    <YAxis type="category" dataKey="skill" width={100} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                    <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                    <Bar dataKey="demand" fill="#1d4ed8" radius={[4, 4, 4, 4]} barSize={20} />
-                  </BarChart>
-                </ResponsiveContainer>
+            <CardContent className="pt-6">
+              <div className="space-y-5">
+                {trendingSkills.map((item, idx) => (
+                  <div key={item.skill} className="group/trend cursor-default">
+                    <div className="flex items-center justify-between mb-2">
+                       <div className="flex items-center gap-2">
+                          <div className="h-6 w-6 rounded bg-slate-100 flex items-center justify-center group-hover/trend:bg-blue-100 transition-colors">
+                             <TrendingUp className="h-3 w-3 text-slate-500 group-hover/trend:text-blue-600" />
+                          </div>
+                          <span className="text-sm font-bold text-slate-700">{item.skill}</span>
+                       </div>
+                       <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-none text-[10px] font-bold py-0 h-5">
+                         {item.demand}% Demand
+                       </Badge>
+                    </div>
+                    <div className="relative h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                       <div 
+                         className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(37,99,235,0.3)]"
+                         style={{ width: `${item.demand}%`, transitionDelay: `${idx * 100}ms` }}
+                       />
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>

@@ -11,6 +11,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, getDocs, setDoc, updateDoc } from "firebase/firestore";
 import { toast } from "sonner";
+import { normalizeSkill } from "@/lib/seed-data";
 
 interface JobRole {
   id: string;
@@ -83,10 +84,18 @@ const SkillAnalysis = () => {
           // Create some sample ones just so the page works if they haven't seeded yet.
           const seedRoles = [
             { id: "software_developer", roleName: "Software Developer", requiredSkills: ["HTML", "CSS", "JavaScript", "React", "Node.js", "Express", "MongoDB", "Git", "Next.js", "Docker"] },
-            { id: "ai_engineer", roleName: "AI Engineer", requiredSkills: ["Python", "Calculus", "PyTorch", "Transformers", "RAG", "Machine Learning"] },
-            { id: "data_scientist", roleName: "Data Scientist", requiredSkills: ["Python", "Pandas", "NumPy", "Scikit-Learn", "SQL", "Statistics", "Data Visualization"] },
-            { id: "cloud_engineer", roleName: "Cloud Engineer", requiredSkills: ["AWS", "Linux", "Docker", "Terraform", "CI/CD", "Kubernetes"] },
-            { id: "cyber_security", roleName: "Cyber Security", requiredSkills: ["TCP/IP", "Linux", "Kali Linux", "BurpSuite", "Networking"] }
+            { id: "frontend_developer", roleName: "Frontend Developer", requiredSkills: ["HTML", "CSS", "JavaScript", "React", "TypeScript", "Git", "Tailwind"] },
+            { id: "backend_developer", roleName: "Backend Developer", requiredSkills: ["Node.js", "Express", "Python", "SQL", "MongoDB", "PostgreSQL", "Docker", "REST API"] },
+            { id: "full_stack_developer", roleName: "Full Stack Developer", requiredSkills: ["JavaScript", "React", "Node.js", "SQL", "HTML", "CSS", "Git", "Docker"] },
+            { id: "data_analytics", roleName: "Data Analytics", requiredSkills: ["Python", "SQL", "Excel", "Tableau", "Power BI", "Statistics", "Pandas"] },
+            { id: "ai_engineer", roleName: "AIML Engineer", requiredSkills: ["Python", "PyTorch", "TensorFlow", "Pandas", "NumPy", "Machine Learning", "Statistics"] },
+            { id: "android_developer", roleName: "Android Developer", requiredSkills: ["Java", "Kotlin", "Android SDK", "Git", "REST API"] },
+            { id: "automation_engineer", roleName: "Automation Engineer", requiredSkills: ["Selenium", "Python", "Java", "Testing", "JIRA", "Agile"] },
+            { id: "cloud_architect_engineer", roleName: "Cloud Architect Engineer", requiredSkills: ["AWS", "Docker", "Kubernetes", "Linux", "Terraform", "CI/CD"] },
+            { id: "cyber_security_specialist", roleName: "Cyber Security Specialist", requiredSkills: ["Networking", "Linux", "Kali Linux", "BurpSuite", "Python", "Firewalls"] },
+            { id: "data_scientist", roleName: "Data Scientist", requiredSkills: ["Python", "Pandas", "NumPy", "Scikit-Learn", "SQL", "Statistics", "Machine Learning"] },
+            { id: "devops_engineer", roleName: "DevOps Engineer", requiredSkills: ["Docker", "Kubernetes", "AWS", "CI/CD", "Linux", "Git", "Terraform"] },
+            { id: "generative_ai_specialist", roleName: "Generative AI Specialist", requiredSkills: ["Python", "PyTorch", "Transformers", "Large Language Models", "NLP", "RAG"] }
           ];
 
           for (const role of seedRoles) {
@@ -101,7 +110,7 @@ const SkillAnalysis = () => {
         // 3. Match Logic
         const processed: ProcessedMatch[] = [];
 
-        const lowerUserSkills = userSkills.map(s => s.toLowerCase().trim());
+        const lowerUserSkills = userSkills.map(s => normalizeSkill(s).toLowerCase().trim());
 
         for (const role of allRoles) {
           const matched: string[] = [];
@@ -110,7 +119,8 @@ const SkillAnalysis = () => {
           const requiredSkills = role.requiredSkills || [];
 
           for (const required of requiredSkills) {
-            const isMatch = lowerUserSkills.includes(required.toLowerCase().trim());
+            const normalizedRequired = normalizeSkill(required).toLowerCase().trim();
+            const isMatch = lowerUserSkills.includes(normalizedRequired);
             if (isMatch) {
               matched.push(required);
             } else {

@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth-context";
 import { useLanguage } from "@/lib/i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { User, Mail, Briefcase, GraduationCap, Loader2, Target } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -56,6 +58,7 @@ const extractTextFromUrl = async (url: string): Promise<string> => {
 const ResumeUpload = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [parsedData, setParsedData] = useState<ParsedResume | null>(null);
 
@@ -142,9 +145,12 @@ const ResumeUpload = () => {
         <h1 className="mb-8 font-display text-3xl font-bold">{t("resume.title")}</h1>
         <Card className="border-dashed bg-slate-50 border-2 shadow-sm p-12 text-center">
             <h3 className="text-lg font-medium text-slate-900 mb-2">No Resume Found</h3>
-            <p className="text-muted-foreground max-w-sm mx-auto">
+            <p className="text-muted-foreground max-w-sm mx-auto mb-6">
               We couldn't find a resume attached to your profile. Please complete your Skill Profile Setup first.
             </p>
+            <Button onClick={() => navigate("/skill-profile")} className="gap-2">
+              <Target className="h-4 w-4" /> Go to Profile Setup
+            </Button>
         </Card>
       </div>
     );
