@@ -289,6 +289,25 @@ const Courses = () => {
   }, [searchParams]);
 
   const handleTabChange = (value: string) => {
+    if (value === "quiz") {
+      // Check if all roadmap milestones are completed first
+      const roadmap = user?.roadmap;
+      if (!roadmap || !roadmap.milestones) {
+        import("sonner").then(({ toast }) => toast.error("Please generate and complete your Learning Roadmap first."));
+        setActiveTab("roadmap");
+        setSearchParams({ tab: "roadmap" });
+        return;
+      }
+      
+      const isComplete = roadmap.milestones.every(m => m.completed);
+      if (!isComplete) {
+        import("sonner").then(({ toast }) => toast.error("Please complete all milestones in your Learning Roadmap before taking the quiz."));
+        setActiveTab("roadmap");
+        setSearchParams({ tab: "roadmap" });
+        return;
+      }
+    }
+    
     setActiveTab(value);
     setSearchParams({ tab: value });
   };
@@ -573,7 +592,20 @@ const Courses = () => {
           </TabsContent>
 
           <TabsContent value="quiz" className="animate-in slide-in-from-bottom-4 duration-500">
-            <QuizAssessment />
+            {user?.roadmap?.milestones?.every(m => m.completed) ? (
+              <QuizAssessment />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-20 bg-muted/20 rounded-lg border border-border/50 shadow-sm">
+                <Target className="h-16 w-16 text-muted-foreground mb-4 opacity-50" />
+                <h3 className="text-xl font-bold mb-2">Roadmap Incomplete</h3>
+                <p className="text-muted-foreground text-center max-w-md mb-6">
+                  You must complete all the milestones in your Learning Roadmap before you can take the {activeDomain} assessment quiz.
+                </p>
+                <Button onClick={() => handleTabChange("roadmap")}>
+                  Return to Learning Path
+                </Button>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       ) : (

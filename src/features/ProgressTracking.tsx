@@ -24,6 +24,7 @@ const ProgressTracking = () => {
   const [missingSkills, setMissingSkills] = useState<string[]>([]);
   const [readinessScore, setReadinessScore] = useState<number>(0);
   const [targetRole, setTargetRole] = useState<string>("");
+  const [quizResults, setQuizResults] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -76,6 +77,26 @@ const ProgressTracking = () => {
               setReadinessScore(Math.round((matched.length / requiredSkills.length) * 100));
             }
           }
+        }
+
+        // Fetch Quiz Results
+        try {
+          const quizResultsRef = collection(db, "userProfiles", user.email, "quizResults");
+          const quizResultsSnap = await getDocs(quizResultsRef);
+          const results = quizResultsSnap.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          
+          results.sort((a: any, b: any) => {
+            const timeA = a.timestamp?.seconds || 0;
+            const timeB = b.timestamp?.seconds || 0;
+            return timeB - timeA;
+          });
+          
+          setQuizResults(results);
+        } catch (e) {
+          console.error("Error fetching quiz results:", e);
         }
       } catch (err) {
         console.error("Error fetching progress data:", err);
@@ -353,6 +374,44 @@ const ProgressTracking = () => {
                 </div>
                 <CheckCircle2 className="h-5 w-5 text-emerald-500" />
               </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Quiz Results Section */}
+      {quizResults.length > 0 && (
+        <div className="mt-8 mb-8">
+          <h2 className="mb-4 font-display text-xl font-bold">Recent Quiz Results</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {quizResults.map((result) => (
+              <Card key={result.id} className={`border-l-4 ${result.status === "PASS" ? "border-l-emerald-500" : "border-l-destructive"}`}>
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h3 className="font-bold">{result.roadmapRole || "Assessment"} Quiz</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {result.timestamp ? new Date(result.timestamp.seconds * 1000).toLocaleDateString() : "Recent"}
+                      </p>
+                    </div>
+                    <Badge variant={result.status === "PASS" ? "default" : "destructive"} className={result.status === "PASS" ? "bg-emerald-500 hover:bg-emerald-600" : ""}>
+                      {result.status}
+                    </Badge>
+                  </div>
+                  <div className="mt-4 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Score</p>
+                      <p className="font-bold text-lg">{result.score}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-muted-foreground">Percentage</p>
+                      <p className={`font-bold text-lg ${result.status === "PASS" ? "text-emerald-500" : "text-destructive"}`}>
+                        {result.percentage}%
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </div>
